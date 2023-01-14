@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+
+option go_package = ".;pbs";
+package pbs;
+
+
+message Request {
+  int64 AdminID = 11; //管理员ID
+}
+
+message Response {
+  int64 AdminID = 10;     //管理员ID
+  string AdminName = 11;  //管理员名字
+}
+// AdminService 管理员服务
+service AdminService {
+  rpc Info (Request) returns (pbs.Response) {}
+}
