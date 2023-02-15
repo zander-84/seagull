@@ -14,12 +14,13 @@ type searchMeta struct {
 	doCount bool
 }
 
-func NewSearchMete() contract.SearchMeta {
+func NewSearchMeta() contract.SearchMeta {
 	out := new(searchMeta)
 	out.maxPage = 10000
 	out.maxPageSize = 100
 	out.cursor = false
 	out.doPagination = true
+	out.doCount = true
 	return out
 }
 

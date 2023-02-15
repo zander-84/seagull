@@ -51,7 +51,7 @@ func (r *mockRegistry) Deregister(ctx context.Context, service *contract.Service
 
 func TestApp(t *testing.T) {
 	resource := endpoint.NewRmc()
-	resource = resource.Use(endpoint.OptionsErrorEncoder(endpoint.WrapError(map[endpoint.Kind]func(ctx context.Context, err error) error{
+	resource = resource.Use(endpoint.OptErrorEncoder(endpoint.WrapError(map[endpoint.Kind]func(ctx context.Context, err error) error{
 		endpoint.Http: func(ctx context.Context, err error) error {
 			err = ctx.(http.Context).ErrorEncoder(err, false)
 			return err
@@ -71,7 +71,7 @@ func TestApp(t *testing.T) {
 			},
 			Enc: func(ctx context.Context, request interface{}) (response interface{}, err error) {
 				httpCtx := ctx.(http.Context)
-				err = httpCtx.String(200, "hello")
+				err = httpCtx.String(200, "hello")()
 				return ctx, err
 			},
 		},
@@ -106,42 +106,41 @@ func TestApp(t *testing.T) {
 	}
 
 	defer client.Close()
-
+	bs := NewBootstrap()
+	bs.RegisterBeforeStartEvents(0, NewEvent("c1", func() error {
+		fmt.Println("run BeforeStart")
+		return nil
+	}), NewEvent("c2", func() error {
+		fmt.Println("run c2")
+		return nil
+	}))
+	bs.RegisterAfterStartEvents(0, NewEvent("c3", func() error {
+		fmt.Println("run AppendAfterStartEvents")
+		return nil
+	}))
+	bs.RegisterBeforeStopEvents(0, NewEvent("c4", func() error {
+		fmt.Println("run AppendBeforeStopEvents")
+		return nil
+	}))
+	bs.RegisterAfterStopEvents(0, NewEvent("c5", func() error {
+		fmt.Println("run AppendAfterStopEvents")
+		return nil
+	}))
+	bs.RegisterAfterStopEvents(0, NewEvent("c5", func() error {
+		fmt.Println("run AppendAfterStopEvents")
+		return nil
+	}))
+	bs.RegisterFinalEvents(0, NewEvent("c6", func() error {
+		fmt.Println("run AppendFinalEvents")
+		return nil
+	}))
 	app := New(
 		Name("kratos"),
 		Version("v1.0.0"),
 		Server(hs, gs),
 		Signal(syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT, syscall.SIGKILL),
+		Bs(bs),
 		RegistrarTimeout(time.Second*10),
-		AppendBeforeStartEvents(0, NewEvent("c1", func() error {
-			fmt.Println("run BeforeStart")
-			return nil
-		}), NewEvent("c2", func() error {
-			fmt.Println("run c2")
-			return nil
-		})),
-		AppendAfterStartEvents(0, NewEvent("c3", func() error {
-			fmt.Println("run AppendAfterStartEvents")
-			return nil
-		})),
-
-		AppendBeforeStopEvents(0, NewEvent("c4", func() error {
-			fmt.Println("run AppendBeforeStopEvents")
-			return nil
-		})),
-		AppendAfterStopEvents(1, NewEvent("c55", func() error {
-			fmt.Println("run AppendAfterStopEvents")
-			return nil
-		})),
-		AppendAfterStopEvents(0, NewEvent("c5", func() error {
-			fmt.Println("run AppendAfterStopEvents")
-			return nil
-		})),
-
-		AppendFinalEvents(0, NewEvent("c6", func() error {
-			fmt.Println("run AppendFinalEvents")
-			return nil
-		})),
 
 		Registrar(&registry2.Registry{Engine: etcd.New(client), Service: map[string]*contract.ServiceInstance{
 			"kratos-1": {
@@ -168,7 +167,7 @@ func TestApp(t *testing.T) {
 }
 func TestApp2(t *testing.T) {
 	resource := endpoint.NewRmc()
-	resource = resource.Use(endpoint.OptionsErrorEncoder(endpoint.WrapError(map[endpoint.Kind]func(ctx context.Context, err error) error{
+	resource = resource.Use(endpoint.OptErrorEncoder(endpoint.WrapError(map[endpoint.Kind]func(ctx context.Context, err error) error{
 		endpoint.Http: func(ctx context.Context, err error) error {
 			err = ctx.(http.Context).ErrorEncoder(err, false)
 			return err
@@ -188,7 +187,7 @@ func TestApp2(t *testing.T) {
 			},
 			Enc: func(ctx context.Context, request interface{}) (response interface{}, err error) {
 				httpCtx := ctx.(http.Context)
-				err = httpCtx.String(200, "hello")
+				err = httpCtx.String(200, "hello")()
 				return ctx, err
 			},
 		},

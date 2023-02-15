@@ -11,7 +11,7 @@ type student2 struct {
 	Id        primitive.ObjectID `bson:"_id,omitempty"`
 	Name      string             `bson:"name"`
 	Status    int                `bson:"status"`
-	Version   int64              `bson:"version"`
+	Version   int                `bson:"version"`
 	CreatedAt int64              `bson:"created_at"`
 	UpdatedAt int64              `bson:"updated_at"`
 
@@ -49,10 +49,12 @@ func (s *student2) SetCreatedAt(createdAt int64) {
 	s.CreatedAt = createdAt
 }
 
-func (s *student2) SetVersion(version int64) {
+func (s *student2) SetVersion(version int) {
 	s.Version = version
 }
-
+func (s *student2) GetVersion() int {
+	return s.Version
+}
 func TestNewMongo(t *testing.T) {
 	mdb := mongo.NewMongo(mongo.Conf{
 		Host:            "172.16.86.160",
@@ -68,7 +70,7 @@ func TestNewMongo(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	m := NewMongo(mdb.DB(), "student")
+	m := NewMongo(mdb.DB(), "student", 100)
 
 	//for i := 0; i < 10000; i++ {
 	//	s := newStudent2()
@@ -88,7 +90,7 @@ func TestNewMongo(t *testing.T) {
 	//fmt.Println(s)
 	//
 	//s.Status = 99
-	//if err := m.Update("63c1460a8abbf40a24e6c81d", s.Version, s); err != nil {
+	//if err := m.ReplaceOne("63c1460a8abbf40a24e6c81d", s.Version, s); err != nil {
 	//	t.Fatal(err.Error())
 	//}
 	//fmt.Println(s)
@@ -142,16 +144,18 @@ func TestNewMongo(t *testing.T) {
 	//fmt.Println(len(res))
 	//fmt.Println(res)
 
-	q2 := make([]primitive.ObjectID, 0)
-	for _, v := range []string{"63c148f6d545515d9c6322ee", "63c148f6d545515d9c6322ef", "63c148f6d545515d9c6322f0"} {
-		id, _ := primitive.ObjectIDFromHex(v)
-		q2 = append(q2, id)
-	}
+	//q2 := make([]primitive.ObjectID, 0)
+	//for _, v := range []string{"63c148f6d545515d9c6322ee", "63c148f6d545515d9c6322ef", "63c148f6d545515d9c6322f0"} {
+	//	id, _ := primitive.ObjectIDFromHex(v)
+	//	q2 = append(q2, id)
+	//}
+	//
+	//res2 := make([]student2, 0)
+	//if err := m.FindIn("_id", q2, &res2); err != nil {
+	//	t.Fatal(err.Error())
+	//}
+	//fmt.Println(len(res2))
+	//fmt.Println(res2)
 
-	res2 := make([]student2, 0)
-	if err := m.FindIn("_id", q2, &res2); err != nil {
-		t.Fatal(err.Error())
-	}
-	fmt.Println(len(res2))
-	fmt.Println(res2)
+	fmt.Println(m.Exist("name", fmt.Sprintf("name-%d", 1)))
 }

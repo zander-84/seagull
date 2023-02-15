@@ -1,6 +1,9 @@
 package contract
 
-import "go.mongodb.org/mongo-driver/bson"
+import (
+	"go.mongodb.org/mongo-driver/bson"
+	"sync"
+)
 
 type SearchMeta interface {
 	UseCursor(cursor bool) SearchMeta
@@ -41,11 +44,12 @@ type Mysql interface {
 	FindByID(id int64, entity IEntity) error
 	FindOneByField(field string, val any, entity IEntity) error
 	FindIn(field string, val any, ptrSliceData interface{}) error
+	Exist(field string, val any) (bool, error)
 
-	Update(id int64, version int64, data map[string]interface{}) error
-	UpdateTx(tx any, id int64, version int64, data map[string]interface{}) error
-	UpdatePart(id int64, version int64, entity IEntity) error
-	UpdateTxPart(tx any, id int64, version int64, entity IEntity) error
+	UpdateMap(id int64, version int, data map[string]interface{}) error
+	UpdateMapTx(tx any, id int64, version int, data map[string]interface{}) error
+	Update(id int64, version int, entity IEntity) error
+	UpdateTx(tx any, id int64, version int, entity IEntity) error
 
 	Search(searchMeta SearchMeta, searchParams MysqlBuilder, ptrSliceData interface{}, cnt *int64) (err error)
 }
@@ -67,18 +71,49 @@ type Mongo interface {
 	FindByID(id string, entity IEntity) error
 	FindOneByField(field string, val any, entity IEntity) error
 	FindIn(field string, val any, ptrSliceData interface{}) error
+	Exist(field string, val any) (bool, error)
 
-	// Update 全量更新 必须带版本号
-	Update(id string, version int64, entity IEntity) error
+	// ReplaceOne version没实现原子递增
+	ReplaceOne(id string, version int, entity IEntity) error
+	ReplaceOneByKv(field string, val any, version int, entity IEntity) error
 
-	UpdatePart(id string, version int64, entity IEntity) error
+	Update(id string, version int, entity IEntity) error
+	UpdateByKv(field string, val any, version int, entity IEntity) error
 
+	DelOneByKv(key string, val any) error
+	DelByKv(key string, val any) error
+	DelByCondition(builder MongoBuilder) error
 	Search(searchMeta SearchMeta, searchParams MongoBuilder, ptrSliceData interface{}, cnt *int64) (err error)
 }
 
 type IEntity interface {
 	UpdatedFields() map[string]any
-	SetUpdatedAt(updatedAt int64)
-	SetCreatedAt(createdAt int64)
-	SetVersion(version int64)
+	UpdateUpdatedAt(updatedAt int64)
+	UpdateCreatedAt(createdAt int64)
+	UpdateVersion(version int)
+	GetVersion() int
+}
+
+type UpdateFields struct {
+	data sync.Map `json:"-" bson:"-"`
+}
+
+func (u *UpdateFields) Update(key string, val any) {
+	u.data.Store(key, val)
+}
+
+func (u *UpdateFields) Reset() {
+	u.data = sync.Map{}
+}
+
+func (u *UpdateFields) Get() map[string]any {
+	out := map[string]any{}
+	u.data.Range(func(key, value any) bool {
+		keyStr, ok := key.(string)
+		if ok {
+			out[keyStr] = value
+		}
+		return true
+	})
+	return out
 }

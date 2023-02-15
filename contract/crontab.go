@@ -1,6 +1,9 @@
 package contract
 
-import "time"
+import (
+	"github.com/zander-84/seagull/contract/def"
+	"time"
+)
 
 /*
 CronJob 描述
@@ -19,7 +22,7 @@ type CronJob struct {
 	Spec string
 	Next time.Time
 	Prev time.Time
-	Cmd  Job
+	Cmd  def.Job
 }
 
 type Crontab interface {

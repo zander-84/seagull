@@ -142,7 +142,7 @@ func FromError(err error) *Error {
 
 var RecordNotFound = NewErr(Code_NotFound, "", "record not found")
 var RecordExist = NewErr(Code_Repeat, "", "record already exist")
-var SystemError = NewErr(Code_SystemSpaceError, "", " system error")
+var SystemError = NewErr(Code_SystemSpaceError, "", "system error")
 var UnImpl = NewErr(Code_UnImpl, "", "UnImpl")
 
 //-----------

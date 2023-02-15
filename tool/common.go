@@ -1,5 +1,34 @@
 package tool
 
+func SliceUniqueAny(in []any) (out []any) {
+	out = make([]any, 0)
+	for i := 0; i < len(in); i++ {
+		if !InSliceAny(in[i], out) {
+			out = append(out, in[i])
+		}
+	}
+	return
+}
+
+func SliceChunkAny2Any(in []any, size int) [][]any {
+	var ret [][]any
+	for size < len(in) {
+		ret = append(ret, in[:size])
+		in = in[size:]
+	}
+	ret = append(ret, in)
+	return ret
+}
+
+func InSliceAny(elem any, slice []any) bool {
+	for _, v := range slice {
+		if elem == v {
+			return true
+		}
+	}
+	return false
+}
+
 func SliceUnique[T comparable](in []T) (out []T) {
 	out = make([]T, 0)
 	for i := 0; i < len(in); i++ {

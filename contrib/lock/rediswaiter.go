@@ -42,7 +42,7 @@ func newRedisV2Locked(engine *redisV2Lock, key string, id string) contract.Locke
 }
 
 // NewRedisWaitLocker  一把基于redis消息订阅的等待锁
-func NewRedisWaitLocker(engine *redis.Client, unique contract.Unique, processor contract.Processor, listenChannel string, leaserInterval, waitTime time.Duration) (locker contract.Locker, cancel func(), err error) {
+func NewRedisWaitLocker(engine *redis.Client, unique contract.Unique, processor contract.Processor, listenChannel string, waitTime time.Duration) (locker contract.Locker, cancel func(), err error) {
 
 	out := &redisV2Lock{
 		engine:        engine,
@@ -56,7 +56,7 @@ func NewRedisWaitLocker(engine *redis.Client, unique contract.Unique, processor 
 	out.pubSub = out.engine.Subscribe(context.Background(), out.listenChannel)
 
 	go out.subscribe()
-	out.redisLeaser, err = newRedisLeaser(engine, processor, leaserInterval)
+	out.redisLeaser, err = newRedisLeaser(engine, processor)
 	//go func() {
 	//	for {
 	//		time.Sleep(time.Second / 2)

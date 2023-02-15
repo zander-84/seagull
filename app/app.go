@@ -6,7 +6,6 @@ import (
 	"github.com/zander-84/seagull/transport"
 	"os"
 	"os/signal"
-	"sort"
 	"sync"
 	"syscall"
 	"time"
@@ -36,16 +35,11 @@ type App struct {
 // New create an application lifecycle manager.
 func New(opts ...Option) *App {
 	o := options{
-		ctx:               context.Background(),
-		sigs:              []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
-		registrarTimeout:  10 * time.Second,
-		stopTimeout:       10 * time.Second,
-		beforeStartEvents: make(map[int][]Event, 0),
-		afterStartEvents:  make(map[int][]Event, 0),
-		beforeStopEvents:  make(map[int][]Event, 0),
-		afterStopEvents:   make(map[int][]Event, 0),
-		finalEvents:       make(map[int][]Event, 0),
-		eventsTimeOut:     time.Minute,
+		ctx:              context.Background(),
+		sigs:             []os.Signal{syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT},
+		registrarTimeout: 10 * time.Second,
+		stopTimeout:      10 * time.Second,
+		bs:               NewBootstrap(),
 	}
 	if id, err := uuid.NewUUID(); err == nil {
 		o.id = id.String()
@@ -93,7 +87,7 @@ func (a *App) Run() error {
 	a.mu.Unlock()
 	eg, ctx := errgroup.WithContext(NewContext(a.ctx, a))
 
-	a.beforeStart()
+	a.opts.bs.execBeforeStartEvents()
 
 	wg := sync.WaitGroup{}
 	for _, srv := range a.opts.servers {
@@ -119,7 +113,7 @@ func (a *App) Run() error {
 		}
 	}
 
-	a.afterStart()
+	a.opts.bs.execAfterStartEvents()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, a.opts.sigs...)
@@ -128,15 +122,15 @@ func (a *App) Run() error {
 		case <-ctx.Done():
 			return nil
 		case <-c:
-			a.beforeStop()
+			a.opts.bs.execBeforeStopEvents()
 			return a.Stop()
 		}
 	})
 
 	err = eg.Wait()
 
-	a.afterStop()
-	a.finalStop()
+	a.opts.bs.execAfterStopEvents()
+	a.opts.bs.execFinalEvents()
 	return err
 }
 
@@ -208,102 +202,60 @@ func (a *App) Context() context.Context {
 	return a.ctx
 }
 
-// beforeStart 服务停止前事件
-func (a *App) beforeStart() {
-	keys := getAscKey(a.opts.beforeStartEvents)
-	if len(keys) < 1 {
-		return
-	}
-	for _, v := range keys {
-		a.doEvents(a.opts.beforeStartEvents[v])
-	}
-
-}
-
-// afterStart 服务启动前事件
-func (a *App) afterStart() {
-	keys := getAscKey(a.opts.afterStartEvents)
-	if len(keys) < 1 {
-		return
-	}
-	for _, v := range keys {
-		a.doEvents(a.opts.afterStartEvents[v])
-	}
-}
-
-// beforeStop 服务停止后事件
-func (a *App) beforeStop() {
-	keys := getAscKey(a.opts.beforeStopEvents)
-	if len(keys) < 1 {
-		return
-	}
-	for _, v := range keys {
-		a.doEvents(a.opts.beforeStopEvents[v])
-	}
-}
-
-// afterStop 服务停止后事件
-func (a *App) afterStop() {
-	keys := getAscKey(a.opts.afterStopEvents)
-	if len(keys) < 1 {
-		return
-	}
-	for _, v := range keys {
-		a.doEvents(a.opts.afterStopEvents[v])
-	}
-}
-
-// finalStop 服务停止后事件
-func (a *App) finalStop() {
-	keys := getAscKey(a.opts.finalEvents)
-	if len(keys) < 1 {
-		return
-	}
-	for _, v := range keys {
-		a.doEvents(a.opts.finalEvents[v])
-	}
-}
-
-func (a *App) doEvents(events []Event) {
-	ctx, cancel := context.WithTimeout(context.Background(), a.opts.eventsTimeOut)
-	defer cancel()
-	fin := make(chan struct{}, 1)
-	wg := sync.WaitGroup{}
-
-	for _, event := range events {
-		wg.Add(1)
-		go func(e func() error) {
-			defer wg.Done()
-			defer func() {
-				if rerr := recover(); rerr != nil {
-				}
-			}()
-			_ = e()
-		}(event.handler)
-	}
-
-	go func() {
-		wg.Wait()
-		fin <- struct{}{}
-	}()
-
-	select {
-	case <-ctx.Done():
-		return
-	case <-fin:
-		return
-	}
-}
-
-func getAscKey(in map[int][]Event) []int {
-	if len(in) < 1 {
-		return []int{}
-	}
-	keys := make([]int, 0)
-	for k, _ := range in {
-		keys = append(keys, k)
-	}
-
-	sort.Sort(sort.IntSlice(keys))
-	return keys
-}
+//// beforeStart 服务启动前事件
+//func (a *App) beforeStart() {
+//	if a.opts.bs == nil {
+//		return
+//	}
+//	keys := getAscKey(a.opts.bs.beforeStartEvents)
+//	if len(keys) < 1 {
+//		return
+//	}
+//	for _, v := range keys {
+//		a.doEvents(a.opts.bs.beforeStartEvents[v])
+//	}
+//}
+//
+//// afterStart 服务启动后事件
+//func (a *App) afterStart() {
+//	keys := getAscKey(a.opts.afterStartEvents)
+//	if len(keys) < 1 {
+//		return
+//	}
+//	for _, v := range keys {
+//		a.doEvents(a.opts.afterStartEvents[v])
+//	}
+//}
+//
+//// beforeStop 服务停止后事件
+//func (a *App) beforeStop() {
+//	keys := getAscKey(a.opts.beforeStopEvents)
+//	if len(keys) < 1 {
+//		return
+//	}
+//	for _, v := range keys {
+//		a.doEvents(a.opts.beforeStopEvents[v])
+//	}
+//}
+//
+//// afterStop 服务停止后事件
+//func (a *App) afterStop() {
+//	keys := getAscKey(a.opts.afterStopEvents)
+//	if len(keys) < 1 {
+//		return
+//	}
+//	for _, v := range keys {
+//		a.doEvents(a.opts.afterStopEvents[v])
+//	}
+//}
+//
+//// finalStop 服务停止后事件
+//func (a *App) finalStop() {
+//	keys := getAscKey(a.opts.finalEvents)
+//	if len(keys) < 1 {
+//		return
+//	}
+//	for _, v := range keys {
+//		a.doEvents(a.opts.finalEvents[v])
+//	}
+//}

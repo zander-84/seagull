@@ -1,4 +1,4 @@
-package contract
+package def
 
 type Job interface {
 	Run() error

@@ -33,13 +33,13 @@ func newRedisLocked(engine *redisLock, key string, id string) contract.Locked {
 	out.engine = engine
 	return out
 }
-func NewRedisLocker(engine *redis.Client, unique contract.Unique, processor contract.Processor, leaserInterval time.Duration) (contract.Locker, error) {
+func NewRedisLocker(engine *redis.Client, unique contract.Unique, processor contract.Processor) (contract.Locker, error) {
 	var err error
 	out := &redisLock{
 		engine: engine,
 		unique: unique,
 	}
-	out.redisLeaser, err = newRedisLeaser(engine, processor, leaserInterval)
+	out.redisLeaser, err = newRedisLeaser(engine, processor)
 	return out, err
 }
 

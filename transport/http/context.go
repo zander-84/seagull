@@ -51,13 +51,12 @@ type Context interface {
 
 	//Returns(interface{}, error) error
 	//Result(int, interface{}) error
-	JSON(int, interface{}) error
-	XML(int, interface{}) error
-	String(int, string) error
-	Blob(int, string, []byte) error
-	Stream(int, string, io.Reader) error
+	JSON(int, interface{}) func() error
+	XML(int, interface{}) func() error
+	String(int, string) func() error
+	Blob(int, string, []byte) func() error
+	Stream(int, string, io.Reader) func() error
 
-	Push() error
 	//Reset(http.ResponseWriter, *http.Request)
 	ErrorEncoder(err error, isProdEnv bool) error
 }
@@ -85,11 +84,10 @@ func (w *responseWriter) Write(data []byte) (int, error) {
 }
 
 type wrapper struct {
-	proxy  Proxy
-	req    *http.Request
-	res    http.ResponseWriter
-	w      responseWriter
-	sender func() error
+	proxy Proxy
+	req   *http.Request
+	res   http.ResponseWriter
+	w     responseWriter
 }
 
 func (c *wrapper) Header() http.Header {
@@ -110,61 +108,48 @@ func (c *wrapper) Query() url.Values {
 func (c *wrapper) Request() *http.Request        { return c.req }
 func (c *wrapper) Response() http.ResponseWriter { return c.res }
 
-func (c *wrapper) JSON(code int, v interface{}) error {
-	c.sender = func() error {
+func (c *wrapper) JSON(code int, v interface{}) func() error {
+	return func() error {
 		c.res.Header().Set("Content-Type", "application/json")
 		c.res.WriteHeader(code)
 		return json.NewEncoder(c.res).Encode(v)
 	}
-	return nil
 }
 
-func (c *wrapper) XML(code int, v interface{}) error {
-	c.sender = func() error {
+func (c *wrapper) XML(code int, v interface{}) func() error {
+	return func() error {
 		c.res.Header().Set("Content-Type", "application/xml")
 		c.res.WriteHeader(code)
 		return xml.NewEncoder(c.res).Encode(v)
 	}
-	return nil
 }
 
-func (c *wrapper) String(code int, text string) error {
-	c.sender = func() error {
+func (c *wrapper) String(code int, text string) func() error {
+	return func() error {
 		c.res.Header().Set("Content-Type", "text/plain")
 		c.res.WriteHeader(code)
 		_, err := c.res.Write([]byte(text))
 		return err
 	}
-	return nil
 }
 
-func (c *wrapper) Blob(code int, contentType string, data []byte) error {
-	c.sender = func() error {
+func (c *wrapper) Blob(code int, contentType string, data []byte) func() error {
+	return func() error {
 		c.res.Header().Set("Content-Type", contentType)
 		c.res.WriteHeader(code)
 		_, err := c.res.Write(data)
 		return err
 	}
 
-	return nil
 }
 
-func (c *wrapper) Stream(code int, contentType string, rd io.Reader) error {
-	c.sender = func() error {
+func (c *wrapper) Stream(code int, contentType string, rd io.Reader) func() error {
+	return func() error {
 		c.res.Header().Set("Content-Type", contentType)
 		c.res.WriteHeader(code)
 		_, err := io.Copy(c.res, rd)
 		return err
 	}
-
-	return nil
-}
-
-func (c *wrapper) Push() error {
-	if c.sender != nil {
-		return c.sender()
-	}
-	return nil
 }
 
 func (c *wrapper) Reset(res http.ResponseWriter, req *http.Request, proxy Proxy) {
@@ -210,7 +195,7 @@ func (c *wrapper) ErrorEncoder(err error, isProdEnv bool) error {
 		thinkErr.Response.Data = thinkErr.Code.ToString()
 	}
 
-	c.JSON(thinkErr.Code.HttpCode(), thinkErr.Response)
+	_ = c.JSON(thinkErr.Code.HttpCode(), thinkErr.Response)()
 
 	if isProdEnv && think.IsErrSystemSpace(thinkErr) {
 		thinkErr.Response.Data = data

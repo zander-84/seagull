@@ -33,7 +33,7 @@ func TestGdb(t *testing.T) {
 		UpdatedAt time.Time
 		Code      string
 		Price     uint
-		Version   int64
+		Version   int
 	}
 	//if err := gdb.Engine().AutoMigrate(&Product{}); err != nil {
 	//	t.Fatal(err.Error())

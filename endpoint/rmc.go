@@ -27,7 +27,8 @@ type Conf struct {
 	FullPath Path
 
 	//ps         []Protocol
-	Middleware Middleware
+	Middleware      Middleware
+	InnerMiddleware Middleware
 
 	HandlerFunc HandlerFunc
 
@@ -47,19 +48,25 @@ func newRmcConf() Conf {
 
 type Options func(*Conf)
 
-func OptionsMiddleware(m ...Middleware) Options {
+func OptMW(m ...Middleware) Options {
 	return func(rmc *Conf) {
 		rmc.Middleware = ChainMerge(rmc.Middleware, m...)
 	}
 }
 
-func OptionsCodec(codecs Codecs) Options {
+func OptInnerMW(m ...Middleware) Options {
+	return func(rmc *Conf) {
+		rmc.InnerMiddleware = ChainMerge(rmc.InnerMiddleware, m...)
+	}
+}
+
+func OptCodec(codecs Codecs) Options {
 	return func(rmc *Conf) {
 		rmc.Codecs = codecs
 	}
 }
 
-func OptionsErrorEncoder(ee ErrorEncoder) Options {
+func OptErrorEncoder(ee ErrorEncoder) Options {
 	return func(rmc *Conf) {
 		if ee != nil {
 			rmc.ErrorEncoder = ee
@@ -149,7 +156,7 @@ func (r *rmc) GetEndpoint(p Kind, method Method, path string) (HandlerFunc, erro
 	if !ok {
 		return nil, think.ErrRecordNotFound("endpoint 404")
 	}
-	return r._endpoint(conf.HandlerFunc, codec.Dec, codec.Enc, conf.Middleware, conf.ErrorEncoder), nil
+	return r._endpoint(conf.HandlerFunc, codec.Dec, codec.Enc, conf.Middleware, conf.InnerMiddleware, conf.ErrorEncoder), nil
 }
 
 func (r *rmc) Endpoint(method Method, path string, hf HandlerFunc, codecs Codecs, options ...Options) {
@@ -199,7 +206,7 @@ func Recover(ctx context.Context) error {
 	return nil
 }
 
-func (r *rmc) _endpoint(hf HandlerFunc, dec Dec, enc Enc, middleware Middleware, errorEncoder ErrorEncoder) HandlerFunc {
+func (r *rmc) _endpoint(hf HandlerFunc, dec Dec, enc Enc, middleware Middleware, innerMiddleware Middleware, errorEncoder ErrorEncoder) HandlerFunc {
 	return func(ctx context.Context, request interface{}) (resp interface{}, err error) {
 		kind := GetTransporter(ctx).Kind()
 
@@ -212,9 +219,14 @@ func (r *rmc) _endpoint(hf HandlerFunc, dec Dec, enc Enc, middleware Middleware,
 						return nil, err
 					}
 				}
-
-				if data, err = hf(ctx, data); err != nil {
-					return nil, err
+				if innerMiddleware == nil {
+					if data, err = hf(ctx, data); err != nil {
+						return nil, err
+					}
+				} else {
+					if data, err = innerMiddleware(hf)(ctx, data); err != nil {
+						return nil, err
+					}
 				}
 
 				if enc != nil {
@@ -226,8 +238,18 @@ func (r *rmc) _endpoint(hf HandlerFunc, dec Dec, enc Enc, middleware Middleware,
 			}
 		}(hf))(ctx, request)
 
-		if err != nil && errorEncoder != nil {
-			err = errorEncoder(ctx, kind, err)
+		if err != nil {
+			if errorEncoder != nil {
+				err = errorEncoder(ctx, kind, err)
+			}
+		} else {
+			if sender, ok := resp.(func() error); ok {
+				if err = sender(); err != nil {
+					if errorEncoder != nil {
+						err = errorEncoder(ctx, kind, err)
+					}
+				}
+			}
 		}
 
 		return resp, err
@@ -242,7 +264,7 @@ func (r *rmc) Proxy(proxy ProxyEndpoint, kind Kind) {
 		}
 
 		if codec, ok := conf.Codecs[kind]; ok {
-			proxy(kind, v.FullPath, r._endpoint(conf.HandlerFunc, codec.Dec, codec.Enc, conf.Middleware, v.ErrorEncoder))
+			proxy(kind, v.FullPath, r._endpoint(conf.HandlerFunc, codec.Dec, codec.Enc, conf.Middleware, conf.InnerMiddleware, v.ErrorEncoder))
 		}
 	}
 }

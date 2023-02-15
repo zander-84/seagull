@@ -14,17 +14,18 @@ import (
 type gormMysql struct {
 	db        *gorm.DB
 	tableName string
+	chunkSize int
 }
 
-func NewGormMysql(db *gorm.DB, tableName string) contract.Mysql {
+func NewGormMysql(db *gorm.DB, tableName string, chunkSize int) contract.Mysql {
 	out := new(gormMysql)
 	out.db = db
 	out.tableName = tableName
+	out.chunkSize = chunkSize
 	return out
 }
 
 func (g *gormMysql) Create(entity contract.IEntity) error {
-	entity.SetVersion(1)
 	return g.CreateTx(g.db, entity)
 }
 func (g *gormMysql) CreateTx(tx any, entity contract.IEntity) error {
@@ -33,9 +34,18 @@ func (g *gormMysql) CreateTx(tx any, entity contract.IEntity) error {
 		return think.SystemError
 	}
 	n := time.Now().UnixMilli()
-	entity.SetCreatedAt(n)
-	entity.SetUpdatedAt(n)
+	entity.UpdateVersion(1)
+	entity.UpdateCreatedAt(n)
+	entity.UpdateUpdatedAt(n)
 	return tx2.Session(&gorm.Session{SkipHooks: true}).Table(g.tableName).Create(entity).Error
+}
+func (g *gormMysql) Exist(field string, val any) (bool, error) {
+	var cnt int64 = 0
+	err := g.db.Table(g.tableName).Where(fmt.Sprintf("`%s`=?", field), val).Count(&cnt).Error
+	if err != nil {
+		return false, err
+	}
+	return cnt > 0, nil
 }
 
 func (g *gormMysql) FindByID(id int64, entity contract.IEntity) error {
@@ -64,7 +74,8 @@ func (g *gormMysql) FindIn(field string, val any, ptrSliceData interface{}) erro
 	reflectValue := reflect.ValueOf(ptrSliceData).Elem()
 
 	query := make([][]any, 0)
-	size := 100
+	size := g.chunkSize
+
 	switch in := val.(type) {
 	case []int:
 		in = tool.SliceUnique(in)
@@ -78,6 +89,9 @@ func (g *gormMysql) FindIn(field string, val any, ptrSliceData interface{}) erro
 	case []string:
 		in = tool.SliceUnique(in)
 		query = tool.SliceChunkAny(in, size)
+	case []any:
+		in = tool.SliceUniqueAny(in)
+		query = tool.SliceChunkAny2Any(in, size)
 	default:
 		return errors.New("data  must be slice integer or string")
 	}
@@ -102,11 +116,11 @@ func (g *gormMysql) FindIn(field string, val any, ptrSliceData interface{}) erro
 	return nil
 }
 
-func (g *gormMysql) Update(id int64, version int64, data map[string]interface{}) error {
-	return g.UpdateTx(g.db, id, version, data)
+func (g *gormMysql) UpdateMap(id int64, version int, data map[string]interface{}) error {
+	return g.UpdateMapTx(g.db, id, version, data)
 }
 
-func (g *gormMysql) UpdateTx(tx any, id int64, version int64, data map[string]interface{}) error {
+func (g *gormMysql) UpdateMapTx(tx any, id int64, version int, data map[string]interface{}) error {
 	tx2, ok := tx.(*gorm.DB)
 	if !ok {
 		return think.SystemError
@@ -127,18 +141,18 @@ func (g *gormMysql) UpdateTx(tx any, id int64, version int64, data map[string]in
 	return res.Error
 }
 
-func (g *gormMysql) UpdatePart(id int64, version int64, entity contract.IEntity) error {
-	return g.UpdateTxPart(g.db, id, version, entity)
+func (g *gormMysql) Update(id int64, version int, entity contract.IEntity) error {
+	return g.UpdateTx(g.db, id, version, entity)
 }
 
-func (g *gormMysql) UpdateTxPart(tx any, id int64, version int64, entity contract.IEntity) error {
+func (g *gormMysql) UpdateTx(tx any, id int64, version int, entity contract.IEntity) error {
 	tx2, ok := tx.(*gorm.DB)
 	if !ok {
 		return think.SystemError
 	}
 
 	updateFields := entity.UpdatedFields()
-	err := g.UpdateTx(tx2, id, version, updateFields)
+	err := g.UpdateMapTx(tx2, id, version, updateFields)
 	if err != nil {
 		return err
 	}
@@ -146,12 +160,12 @@ func (g *gormMysql) UpdateTxPart(tx any, id int64, version int64, entity contrac
 	//更新时间+version更新
 	if updateAt, ok := updateFields["updated_at"]; ok {
 		if updateAt2, ok := updateAt.(int64); ok {
-			entity.SetUpdatedAt(updateAt2)
+			entity.UpdateUpdatedAt(updateAt2)
 		}
 	}
 
 	if version > 0 {
-		entity.SetVersion(version + 1)
+		entity.UpdateVersion(version + 1)
 	}
 	return nil
 }

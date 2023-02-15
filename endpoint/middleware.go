@@ -1,7 +1,7 @@
 package endpoint
 
 // Middleware is a chainable behavior modifier for endpoints.
-type Middleware func(HandlerFunc) HandlerFunc
+type Middleware func(next HandlerFunc) HandlerFunc
 
 // Chain returns a Middleware that specifies the chained handler for endpoint.
 func Chain(m ...Middleware) Middleware {

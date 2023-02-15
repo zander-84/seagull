@@ -28,20 +28,18 @@ return {exitTag}
 `
 
 type redisLeaser struct {
-	leaserInterval time.Duration
-	leaser         map[string]chan struct{}
-	leaserLocker   sync.RWMutex
-	luaLeaserSHA   string
-	luaLoaded      uint32
-	luaMutex       sync.RWMutex
-	processor      contract.Processor
-	engine         *redis.Client
+	leaser       map[string]chan struct{}
+	leaserLocker sync.RWMutex
+	luaLeaserSHA string
+	luaLoaded    uint32
+	luaMutex     sync.RWMutex
+	processor    contract.Processor
+	engine       *redis.Client
 }
 
-func newRedisLeaser(engine *redis.Client, processor contract.Processor, leaserInterval time.Duration) (*redisLeaser, error) {
+func newRedisLeaser(engine *redis.Client, processor contract.Processor) (*redisLeaser, error) {
 	out := new(redisLeaser)
 	out.engine = engine
-	out.leaserInterval = leaserInterval
 	out.leaser = make(map[string]chan struct{}, 0)
 	out.processor = processor
 	err := out.loadLuaScripts(context.Background())
@@ -92,7 +90,7 @@ func (r *redisLeaser) lease(ctx context.Context, key string, id string, expirati
 			select {
 			case <-leaserChan:
 				return
-			case <-time.After(r.leaserInterval):
+			case <-time.After(expiration / 3):
 				// 续租
 				ok, err := r.doLua(ctx, key, id, expiration)
 				if err != nil {

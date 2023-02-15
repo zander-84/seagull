@@ -18,20 +18,22 @@ import (
 type myMongo struct {
 	db        *mongo.Database
 	tableName string
+	chunkSize int
 }
 
-func NewMongo(db *mongo.Database, tableName string) contract.Mongo {
+func NewMongo(db *mongo.Database, tableName string, chunkSize int) contract.Mongo {
 	out := new(myMongo)
 	out.db = db
 	out.tableName = tableName
+	out.chunkSize = chunkSize
 	return out
 }
 
 func (m *myMongo) Create(entity contract.IEntity) (string, error) {
 	n := time.Now().UnixMilli()
-	entity.SetVersion(1)
-	entity.SetCreatedAt(n)
-	entity.SetUpdatedAt(n)
+	entity.UpdateVersion(1)
+	entity.UpdateCreatedAt(n)
+	entity.UpdateUpdatedAt(n)
 	res, err := m.db.Collection(m.tableName).InsertOne(context.Background(), entity)
 	if err != nil {
 		return "", err
@@ -59,6 +61,17 @@ func (m *myMongo) FindByID(id string, entity contract.IEntity) error {
 	return err
 }
 
+func (m *myMongo) Exist(field string, val any) (bool, error) {
+	res := m.db.Collection(m.tableName).FindOne(context.Background(), bson.D{{Key: field, Value: val}})
+	if res.Err() != nil {
+		if res.Err() == mongo.ErrNoDocuments {
+			return false, nil
+		}
+		return false, res.Err()
+	}
+
+	return true, nil
+}
 func (m *myMongo) FindOneByField(field string, val any, entity contract.IEntity) error {
 	err := m.db.Collection(m.tableName).FindOne(context.Background(), bson.D{{field, val}}).Decode(entity)
 	if err != nil {
@@ -80,7 +93,7 @@ func (m *myMongo) FindIn(field string, val any, ptrSliceData interface{}) error 
 
 	reflectValue := reflect.ValueOf(ptrSliceData).Elem()
 	query := make([][]any, 0)
-	size := 100
+	size := m.chunkSize
 	switch in := val.(type) {
 	case []int:
 		in = tool.SliceUnique(in)
@@ -97,6 +110,9 @@ func (m *myMongo) FindIn(field string, val any, ptrSliceData interface{}) error 
 	case []primitive.ObjectID:
 		in = tool.SliceUnique(in)
 		query = tool.SliceChunkAny(in, size)
+	case []any:
+		in = tool.SliceUniqueAny(in)
+		query = tool.SliceChunkAny2Any(in, size)
 	default:
 		return errors.New("data  must be slice integer or string")
 	}
@@ -125,16 +141,41 @@ func (m *myMongo) FindIn(field string, val any, ptrSliceData interface{}) error 
 	return nil
 }
 
-func (m *myMongo) Update(id string, version int64, entity contract.IEntity) error {
+func (m *myMongo) ReplaceOne(id string, version int, entity contract.IEntity) error {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return err
 	}
 	n := time.Now().UnixMilli()
-	entity.SetUpdatedAt(n)
+	entity.UpdateUpdatedAt(n)
 	where := bson.D{{"_id", objectID}}
-	entity.SetVersion(version + 1)
-	where = append(where, bson.E{Key: "version", Value: version})
+
+	if version > 0 {
+		entity.UpdateVersion(version + 1)
+		where = append(where, bson.E{Key: "version", Value: version})
+	} else {
+		entity.UpdateVersion(entity.GetVersion() + 1)
+	}
+
+	res, err := m.db.Collection(m.tableName).ReplaceOne(context.Background(), where, entity)
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 || res.ModifiedCount == 0 {
+		return think.RecordNotFound
+	}
+	return nil
+}
+func (m *myMongo) ReplaceOneByKv(field string, val any, version int, entity contract.IEntity) error {
+	entity.UpdateUpdatedAt(time.Now().UnixMilli())
+	where := bson.D{{field, val}}
+	if version > 0 {
+		entity.UpdateVersion(version + 1)
+		where = append(where, bson.E{Key: "version", Value: version})
+	} else {
+		entity.UpdateVersion(entity.GetVersion() + 1)
+	}
+
 	res, err := m.db.Collection(m.tableName).ReplaceOne(context.Background(), where, entity)
 	if err != nil {
 		return err
@@ -145,14 +186,18 @@ func (m *myMongo) Update(id string, version int64, entity contract.IEntity) erro
 	return nil
 }
 
-func (m *myMongo) UpdatePart(id string, version int64, entity contract.IEntity) error {
+func (m *myMongo) Update(id string, version int, entity contract.IEntity) error {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return err
 	}
+	return m.UpdateByKv("_id", objectID, version, entity)
+}
+func (m *myMongo) UpdateByKv(field string, val any, version int, entity contract.IEntity) error {
+
 	n := time.Now().UnixMilli()
-	entity.SetUpdatedAt(n)
-	where := bson.D{{"_id", objectID}}
+	entity.UpdateUpdatedAt(n)
+	where := bson.D{{field, val}}
 	if version > 0 {
 		where = append(where, bson.E{Key: "version", Value: version})
 	}
@@ -173,9 +218,23 @@ func (m *myMongo) UpdatePart(id string, version int64, entity contract.IEntity) 
 		return think.RecordNotFound
 	}
 	if version > 0 {
-		entity.SetVersion(version + 1)
+		entity.UpdateVersion(version + 1)
 	}
 	return nil
+}
+func (m *myMongo) DelOneByKv(key string, val any) error {
+	_, err := m.db.Collection(m.tableName).DeleteOne(context.Background(), bson.D{{Key: key, Value: val}})
+	return err
+}
+
+func (m *myMongo) DelByKv(key string, val any) error {
+	_, err := m.db.Collection(m.tableName).DeleteMany(context.Background(), bson.D{{Key: key, Value: val}})
+	return err
+}
+
+func (m *myMongo) DelByCondition(builder contract.MongoBuilder) error {
+	_, err := m.db.Collection(m.tableName).DeleteMany(context.Background(), builder.BuildQuery())
+	return err
 }
 
 func (m *myMongo) Search(searchMeta contract.SearchMeta, searchParams contract.MongoBuilder, ptrSliceData interface{}, cnt *int64) (err error) {

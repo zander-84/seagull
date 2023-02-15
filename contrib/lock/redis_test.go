@@ -49,7 +49,7 @@ func TestNewRedisLocker(t *testing.T) {
 		PoolTimeout: 300,
 	})
 	r.Start()
-	l, err := NewRedisLocker(r.Engine(), unique.New("LF", "", "aa", checkcode.NewAlpha(3)), worker.NewProcessor(), time.Second*5)
+	l, err := NewRedisLocker(r.Engine(), unique.New("LF", "", "aa", checkcode.NewAlpha(3)), worker.NewProcessor())
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -83,7 +83,7 @@ func TestNewRedisV2Locker(t *testing.T) {
 	})
 	r.Start()
 
-	l, cancel, err := NewRedisWaitLocker(r.Engine(), unique.New("LF", "", "aa", checkcode.NewAlpha(3)), worker.NewProcessor(), "testchan", time.Second*5, time.Minute)
+	l, cancel, err := NewRedisWaitLocker(r.Engine(), unique.New("LF", "", "aa", checkcode.NewAlpha(3)), worker.NewProcessor(), "testchan", time.Minute)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

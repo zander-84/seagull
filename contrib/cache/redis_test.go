@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"github.com/zander-84/seagull/contract"
+	"github.com/zander-84/seagull/contract/def"
 	"github.com/zander-84/seagull/contrib/codec"
 	"github.com/zander-84/seagull/contrib/worker"
 	goredis2 "github.com/zander-84/seagull/drive/goredis"
@@ -21,9 +21,9 @@ func TestNewRedisCache(t *testing.T) {
 	})
 	r.Start()
 
-	c := NewRedisCache(r.Engine(), codec.GetCodec(codec.Json), worker.NewProcessor())
+	c := NewRedisCache(r.Engine(), codec.GetCodec(codec.Json), worker.NewProcessor(), 0)
 	ctx := context.Background()
-	key := contract.NewCacheKey("key")
+	key := def.K{Key: "key"}
 	s1 := student{
 		Age:  18,
 		Name: "zander",
@@ -38,9 +38,9 @@ func TestNewRedisCache(t *testing.T) {
 	}
 	t.Log(s2)
 
-	key2 := contract.NewCacheKey("key2")
+	key2 := def.K{Key: "key2"}
 	s3 := new(student)
-	if err := c.GetOrSet(ctx, key2, s3, time.Hour, func(key contract.CacheKey) (value any, err error) {
+	if err := c.GetOrSet(ctx, key2, s3, time.Hour, func(key def.K) (value any, err error) {
 		return student{
 			Age:  19,
 			Name: "zander",
@@ -50,8 +50,8 @@ func TestNewRedisCache(t *testing.T) {
 	}
 	t.Log(s3)
 
-	key3 := make([]contract.CacheKey, 0)
-	key3 = append(key3, key, key2, contract.NewCacheKey("key3"))
+	key3 := make([]def.K, 0)
+	key3 = append(key3, key, key2, def.K{Key: "key3"})
 	//s4 := make([]student, 0)
 
 	//if err := c.BatchGetOrSet(ctx, key3, &s4, time.Hour, func(missIds []contract.CacheKey) (value map[contract.CacheKey]any, err error) {

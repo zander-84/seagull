@@ -1,17 +1,17 @@
 package threadpool
 
 import (
-	"github.com/zander-84/seagull/contract"
+	"github.com/zander-84/seagull/contract/def"
 	"sync"
 )
 
 type job struct {
 	err     error
 	wait    *sync.WaitGroup
-	handler contract.Job
+	handler def.Job
 }
 
-func newJob(Job contract.Job, wait *sync.WaitGroup) *job {
+func newJob(Job def.Job, wait *sync.WaitGroup) *job {
 	return &job{
 		err:     nil,
 		wait:    wait,

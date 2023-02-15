@@ -3,7 +3,7 @@ package threadpool
 import (
 	"context"
 	"errors"
-	"github.com/zander-84/seagull/contract"
+	"github.com/zander-84/seagull/contract/def"
 	"github.com/zander-84/seagull/think"
 	"sync"
 	"sync/atomic"
@@ -95,18 +95,18 @@ func (d *Dispatcher) dispatch() {
 	d.exit <- struct{}{}
 }
 
-func (d *Dispatcher) AddJobUnsafe(job contract.Job, wait *sync.WaitGroup) (err error) {
+func (d *Dispatcher) AddJobUnsafe(job def.Job, wait *sync.WaitGroup) (err error) {
 	if d.conf.MaxQueues <= len(d.jobChannel) {
 		return errors.New("system busyness")
 	}
 	return d.addJobWait(job, wait)
 }
 
-func (d *Dispatcher) AddJob(job contract.Job, wait *sync.WaitGroup) (err error) {
+func (d *Dispatcher) AddJob(job def.Job, wait *sync.WaitGroup) (err error) {
 	return d.addJobWait(job, wait)
 }
 
-func (d *Dispatcher) addJobWait(job contract.Job, wait *sync.WaitGroup) (err error) {
+func (d *Dispatcher) addJobWait(job def.Job, wait *sync.WaitGroup) (err error) {
 	if wait != nil {
 		wait.Add(1)
 	}
@@ -119,7 +119,7 @@ func (d *Dispatcher) addJobWait(job contract.Job, wait *sync.WaitGroup) (err err
 	return err
 }
 
-func (d *Dispatcher) addJob(job contract.Job, wait *sync.WaitGroup) (err error) {
+func (d *Dispatcher) addJob(job def.Job, wait *sync.WaitGroup) (err error) {
 	defer func() {
 		if recoverErr := recover(); recoverErr != nil {
 			err = errors.New("queue already exited")

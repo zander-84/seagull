@@ -3,6 +3,7 @@ package crontab
 import (
 	"fmt"
 	"github.com/zander-84/seagull/contract"
+	"github.com/zander-84/seagull/contract/def"
 	"testing"
 	"time"
 )
@@ -35,7 +36,7 @@ func testAdd(t *testing.T, c *Crontab) {
 		ID:   "test1",
 		Desc: "测试1",
 		Spec: "* * * * * *",
-		Cmd: contract.JobFunc(func() error {
+		Cmd: def.JobFunc(func() error {
 			fmt.Println("hello world")
 			return nil
 		}),
@@ -47,7 +48,7 @@ func testAdd(t *testing.T, c *Crontab) {
 		ID:   "test2",
 		Desc: "测试2",
 		Spec: "* * * * * *",
-		Cmd: contract.JobFunc(func() error {
+		Cmd: def.JobFunc(func() error {
 			fmt.Println("hello world 2222")
 			return nil
 		}),

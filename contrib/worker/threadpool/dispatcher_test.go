@@ -3,7 +3,7 @@ package threadpool
 import (
 	"context"
 	"fmt"
-	"github.com/zander-84/seagull/contract"
+	"github.com/zander-84/seagull/contract/def"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -25,7 +25,7 @@ func TestDispatcher(t *testing.T) {
 	var a int64
 	cnt := 1000
 	for i := 0; i < cnt; i++ {
-		if err := d.AddJob(contract.JobFunc(func() error {
+		if err := d.AddJob(def.JobFunc(func() error {
 			atomic.AddInt64(&a, 1)
 			time.Sleep(1 * time.Second)
 			return nil

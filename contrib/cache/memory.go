@@ -6,6 +6,7 @@ import (
 	"github.com/golang/groupcache/singleflight"
 	"github.com/patrickmn/go-cache"
 	"github.com/zander-84/seagull/contract"
+	"github.com/zander-84/seagull/contract/def"
 	"github.com/zander-84/seagull/think"
 	"reflect"
 	"runtime"
@@ -24,34 +25,34 @@ func NewMemoryCache(engine *cache.Cache, processor contract.Processor) contract.
 	return &memory{engine: engine, processor: processor}
 }
 
-func (m *memory) Exists(ctx context.Context, keys ...contract.CacheKey) (bool, error) {
+func (m *memory) Exists(ctx context.Context, keys ...def.K) (bool, error) {
 	for _, key := range keys {
-		if _, ok := m.engine.Get(key.Key()); !ok {
+		if _, ok := m.engine.Get(key.Key); !ok {
 			return false, nil
 		}
 	}
 	return true, nil
 }
 
-func (m *memory) Get(ctx context.Context, key contract.CacheKey, recPtr interface{}) error {
-	value, ok := m.engine.Get(key.Key())
+func (m *memory) Get(ctx context.Context, key def.K, recPtr interface{}) error {
+	value, ok := m.engine.Get(key.Key)
 	if !ok {
 		return think.RecordNotFound
 	}
 	return m.unmarshal(value, recPtr)
 }
 
-func (m *memory) Set(ctx context.Context, key contract.CacheKey, value interface{}, expires time.Duration) error {
+func (m *memory) Set(ctx context.Context, key def.K, value interface{}, expires time.Duration) error {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 	if expires == 0 {
 		expires = -1
 	}
-	m.engine.Set(key.Key(), value, expires)
+	m.engine.Set(key.Key, value, expires)
 	return nil
 }
 
-func (m *memory) SetNX(ctx context.Context, key contract.CacheKey, value interface{}, expires time.Duration) (bool, error) {
+func (m *memory) SetNX(ctx context.Context, key def.K, value interface{}, expires time.Duration) (bool, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -64,17 +65,17 @@ func (m *memory) SetNX(ctx context.Context, key contract.CacheKey, value interfa
 		expires = -1
 	}
 
-	m.engine.Set(key.Key(), value, expires)
+	m.engine.Set(key.Key, value, expires)
 	return true, nil
 }
 
-func (m *memory) Delete(ctx context.Context, key ...contract.CacheKey) error {
+func (m *memory) Delete(ctx context.Context, key ...def.K) error {
 	for _, _key := range key {
-		m.engine.Delete(_key.Key())
+		m.engine.Delete(_key.Key)
 	}
 	return nil
 }
-func (m *memory) DelayDelete(ctx context.Context, delay time.Duration, keys ...contract.CacheKey) error {
+func (m *memory) DelayDelete(ctx context.Context, delay time.Duration, keys ...def.K) error {
 	m.processor.Go(func() {
 		select {
 		case <-time.After(delay):
@@ -86,7 +87,7 @@ func (m *memory) DelayDelete(ctx context.Context, delay time.Duration, keys ...c
 
 	return nil
 }
-func (m *memory) GetOrSet(ctx context.Context, key contract.CacheKey, recPtr interface{}, expires time.Duration, f func(key contract.CacheKey) (value any, err error)) (err error) {
+func (m *memory) GetOrSet(ctx context.Context, key def.K, recPtr interface{}, expires time.Duration, f func(key def.K) (value any, err error)) (err error) {
 	defer func() {
 		if recoverErr := recover(); recoverErr != nil {
 			err = think.ErrType("类型错误")
@@ -100,7 +101,7 @@ func (m *memory) GetOrSet(ctx context.Context, key contract.CacheKey, recPtr int
 		return err
 	}
 
-	fv, fe := m.singleFlight.Do(key.Key(), func() (any, error) {
+	fv, fe := m.singleFlight.Do(key.Key, func() (any, error) {
 		return f(key)
 	})
 	if fe != nil {
@@ -115,18 +116,18 @@ func (m *memory) GetOrSet(ctx context.Context, key contract.CacheKey, recPtr int
 
 }
 
-func (m *memory) BatchGetOrSet(ctx context.Context, ids []contract.CacheKey, recPtr interface{}, expires time.Duration, f func(missIds []contract.CacheKey) (res map[contract.CacheKey]any, err error)) error {
+func (m *memory) BatchGetOrSet(ctx context.Context, keys []def.K, recPtr interface{}, expires time.Duration, f func(missIds []def.K) (res map[string]any, err error)) error {
 	if reflect.ValueOf(recPtr).Elem().Type().Kind() != reflect.Slice {
 		return errors.New("data  must be slice ptr")
 	}
 	reflectValue := reflect.ValueOf(recPtr).Elem()
-	var missIds = make([]contract.CacheKey, 0)
-	for _, id := range ids {
+	var missIds = make([]def.K, 0)
+	for _, key := range keys {
 		tmp := reflect.New(reflectValue.Type().Elem())
-		err := m.Get(ctx, id, tmp.Interface())
+		err := m.Get(ctx, key, tmp.Interface())
 		if err != nil {
 			if think.IsErrNotFound(err) {
-				missIds = append(missIds, id)
+				missIds = append(missIds, key)
 			} else {
 				return err
 			}
@@ -144,7 +145,7 @@ func (m *memory) BatchGetOrSet(ctx context.Context, ids []contract.CacheKey, rec
 	}
 
 	for key, val := range missVal {
-		if _, err := m.SetNX(ctx, key, val, expires); err != nil {
+		if _, err := m.SetNX(ctx, def.K{Key: key}, val, expires); err != nil {
 			return err
 		}
 		reflectValue.Set(reflect.Append(reflectValue, getValue(val)))

@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"github.com/zander-84/seagull/contract"
+	"github.com/zander-84/seagull/contract/def"
 	"github.com/zander-84/seagull/contrib/worker"
 	memory3 "github.com/zander-84/seagull/drive/memory"
 	"testing"
@@ -23,7 +23,7 @@ func TestNewMemoryCache(t *testing.T) {
 
 	c := NewMemoryCache(mem.Engine(), worker.NewProcessor())
 	ctx := context.Background()
-	key := contract.NewCacheKey("key")
+	key := def.K{Key: "key"}
 	s1 := student{
 		Age:  18,
 		Name: "zander",
@@ -38,9 +38,9 @@ func TestNewMemoryCache(t *testing.T) {
 	}
 	t.Log(s2)
 
-	key2 := contract.NewCacheKey("key2")
+	key2 := def.K{Key: "key2"}
 	s3 := new(student)
-	if err := c.GetOrSet(ctx, key2, s3, time.Hour, func(key contract.CacheKey) (value any, err error) {
+	if err := c.GetOrSet(ctx, key2, s3, time.Hour, func(key def.K) (value any, err error) {
 		return student{
 			Age:  19,
 			Name: "zander",
@@ -50,14 +50,14 @@ func TestNewMemoryCache(t *testing.T) {
 	}
 	t.Log(s3)
 
-	key3 := make([]contract.CacheKey, 0)
-	key3 = append(key3, key, key2, contract.NewCacheKey("key3"))
+	key3 := make([]def.K, 0)
+	key3 = append(key3, key, key2, def.K{Key: "key3"})
 	s4 := make([]student, 0)
 
-	if err := c.BatchGetOrSet(ctx, key3, &s4, time.Hour, func(missIds []contract.CacheKey) (value map[contract.CacheKey]any, err error) {
-		value = make(map[contract.CacheKey]any, 0)
+	if err := c.BatchGetOrSet(ctx, key3, &s4, time.Hour, func(missIds []def.K) (value map[string]any, err error) {
+		value = make(map[string]any, 0)
 		for _, v := range missIds {
-			value[v] = &student{
+			value[v.Key] = &student{
 				Age:  19,
 				Name: "zander",
 			}

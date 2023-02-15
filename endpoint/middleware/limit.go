@@ -37,16 +37,16 @@ func Limiter(l *limiter.Limiter, idFunc func(ctx context.Context) (ip string, er
 // * 10 reqs/minute: "10-M"
 // * 1000 reqs/hour: "1000-H"
 // * 2000 reqs/day: "2000-D"
-func NewMemoryLimiter(formatted string) *limiter.Limiter {
+func NewMemoryLimiter(formatted string) (*limiter.Limiter, error) {
 	_rate, err := limiter.NewRateFromFormatted(formatted)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	store := memory.NewStore()
-	return limiter.New(store, _rate)
+	return limiter.New(store, _rate), nil
 }
 
-func NewRedisLimiter(formatted string, rds redis.Client) *limiter.Limiter {
+func NewRedisLimiter(formatted string, rds redis.Client) (*limiter.Limiter, error) {
 	_rate, err := limiter.NewRateFromFormatted(formatted)
 	if err != nil {
 		panic(err)
@@ -56,7 +56,7 @@ func NewRedisLimiter(formatted string, rds redis.Client) *limiter.Limiter {
 		CleanUpInterval: limiter.DefaultCleanUpInterval,
 	})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return limiter.New(store, _rate)
+	return limiter.New(store, _rate), nil
 }

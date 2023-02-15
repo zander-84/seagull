@@ -31,49 +31,42 @@ func (r *Router) Endpoint(kind endpoint.Kind, fullPath endpoint.Path, e endpoint
 			initCtx(ctx, kind, fullPath)
 			gullCtx := http.NewHttpContext(ctx.Writer, ctx.Request, &proxy{ctx: ctx})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodHead:
 		r.ginEngine.OPTIONS(fullPath.Path(), func(ctx *gin.Context) {
 			initCtx(ctx, kind, fullPath)
 			gullCtx := http.NewHttpContext(ctx.Writer, ctx.Request, &proxy{ctx: ctx})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodPost:
 		r.ginEngine.POST(fullPath.Path(), func(ctx *gin.Context) {
 			initCtx(ctx, kind, fullPath)
 			gullCtx := http.NewHttpContext(ctx.Writer, ctx.Request, &proxy{ctx: ctx})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodPut:
 		r.ginEngine.PUT(fullPath.Path(), func(ctx *gin.Context) {
 			initCtx(ctx, kind, fullPath)
 			gullCtx := http.NewHttpContext(ctx.Writer, ctx.Request, &proxy{ctx: ctx})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodPatch:
 		r.ginEngine.PATCH(fullPath.Path(), func(ctx *gin.Context) {
 			initCtx(ctx, kind, fullPath)
 			gullCtx := http.NewHttpContext(ctx.Writer, ctx.Request, &proxy{ctx: ctx})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodDelete:
 		r.ginEngine.DELETE(fullPath.Path(), func(ctx *gin.Context) {
 			initCtx(ctx, kind, fullPath)
 			gullCtx := http.NewHttpContext(ctx.Writer, ctx.Request, &proxy{ctx: ctx})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodOptions:
 		r.ginEngine.OPTIONS(fullPath.Path(), func(ctx *gin.Context) {
 			initCtx(ctx, kind, fullPath)
 			gullCtx := http.NewHttpContext(ctx.Writer, ctx.Request, &proxy{ctx: ctx})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	default:
 

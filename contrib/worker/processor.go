@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/zander-84/seagull/contract"
 	"github.com/zander-84/seagull/think"
+	"github.com/zander-84/seagull/tool"
 	"log"
 	"runtime"
 	"sync"
@@ -150,19 +151,8 @@ func (p *processor) GoListenCtx(contexts []context.Context, handler func() (any,
 }
 
 func (p *processor) Wait(duration time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), duration)
-	defer cancel()
-
-	fin := make(chan struct{}, 1)
-	go func() {
+	return tool.ExitWithTimeout(duration, func() error {
 		p.waiter.Wait()
-		fin <- struct{}{}
-	}()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-fin:
 		return nil
-	}
+	})
 }

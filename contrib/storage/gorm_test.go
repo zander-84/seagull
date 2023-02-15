@@ -24,7 +24,7 @@ type student struct {
 	Id        int64
 	Name      string
 	Status    int
-	Version   int64
+	Version   int
 	CreatedAt int64
 	UpdatedAt int64
 
@@ -62,8 +62,11 @@ func (s *student) SetCreatedAt(createdAt int64) {
 	s.CreatedAt = createdAt
 }
 
-func (s *student) SetVersion(version int64) {
+func (s *student) SetVersion(version int) {
 	s.Version = version
+}
+func (s *student) GetVersion() int {
+	return s.Version
 }
 
 func TestNewGormMysql(t *testing.T) {
@@ -85,7 +88,7 @@ func TestNewGormMysql(t *testing.T) {
 	}
 	defer gdb.Stop()
 
-	m := NewGormMysql(gdb.Engine(), "student")
+	m := NewGormMysql(gdb.Engine(), "student", 100)
 
 	//for i := 0; i < 10000; i++ {
 	//	s := newStudent()
@@ -135,18 +138,18 @@ func TestNewGormMysql(t *testing.T) {
 	//mysqlBuilder2.AppendWhere("version=?", 0)
 	//
 
-	q := make([]string, 0)
-	for i := 0; i < 1000; i++ {
-		q = append(q, fmt.Sprintf("%d", i))
-		q = append(q, fmt.Sprintf("%d", i))
-	}
-	res := make([]student, 0)
-	if err := m.FindIn("id", q, &res); err != nil {
-		t.Fatal(err.Error())
-	}
-	fmt.Println(len(res))
-	fmt.Println(res)
-
+	//q := make([]string, 0)
+	//for i := 0; i < 1000; i++ {
+	//	q = append(q, fmt.Sprintf("%d", i))
+	//	q = append(q, fmt.Sprintf("%d", i))
+	//}
+	//res := make([]student, 0)
+	//if err := m.FindIn("id", q, &res); err != nil {
+	//	t.Fatal(err.Error())
+	//}
+	//fmt.Println(len(res))
+	//fmt.Println(res)
+	fmt.Println(m.Exist("id", 1))
 	//res := make([]student, 0)
 	//var cnt int64 = 0
 	//if err := m.Search(searchMeta2, mysqlBuilder2, &res, &cnt); err != nil {

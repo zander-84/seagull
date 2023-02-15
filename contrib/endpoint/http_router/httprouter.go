@@ -30,49 +30,42 @@ func (r *Router) Endpoint(kind endpoint.Kind, fullPath endpoint.Path, e endpoint
 			request = setRequest(request, kind, fullPath)
 			gullCtx := http.NewHttpContext(writer, request, &proxy{params: params})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodHead:
 		r.engine.HEAD(fullPath.Path(), func(writer http2.ResponseWriter, request *http2.Request, params httprouter.Params) {
 			request = setRequest(request, kind, fullPath)
 			gullCtx := http.NewHttpContext(writer, request, &proxy{params: params})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodPost:
 		r.engine.POST(fullPath.Path(), func(writer http2.ResponseWriter, request *http2.Request, params httprouter.Params) {
 			request = setRequest(request, kind, fullPath)
 			gullCtx := http.NewHttpContext(writer, request, &proxy{params: params})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodPut:
 		r.engine.PUT(fullPath.Path(), func(writer http2.ResponseWriter, request *http2.Request, params httprouter.Params) {
 			request = setRequest(request, kind, fullPath)
 			gullCtx := http.NewHttpContext(writer, request, &proxy{params: params})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodPatch:
 		r.engine.PATCH(fullPath.Path(), func(writer http2.ResponseWriter, request *http2.Request, params httprouter.Params) {
 			request = setRequest(request, kind, fullPath)
 			gullCtx := http.NewHttpContext(writer, request, &proxy{params: params})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodDelete:
 		r.engine.DELETE(fullPath.Path(), func(writer http2.ResponseWriter, request *http2.Request, params httprouter.Params) {
 			request = setRequest(request, kind, fullPath)
 			gullCtx := http.NewHttpContext(writer, request, &proxy{params: params})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	case endpoint.MethodOptions:
 		r.engine.OPTIONS(fullPath.Path(), func(writer http2.ResponseWriter, request *http2.Request, params httprouter.Params) {
 			request = setRequest(request, kind, fullPath)
 			gullCtx := http.NewHttpContext(writer, request, &proxy{params: params})
 			_, _ = e(gullCtx, nil)
-			gullCtx.Push()
 		})
 	default:
 	}
