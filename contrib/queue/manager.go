@@ -35,7 +35,7 @@ func (f *manager) SendFromBackup(Id string) error {
 		return err
 	}
 	mess.SetCode(contract.QCodeWaiting)
-	err := f.mongo.UpdatePartByKv("uid", mess.UID, 0, mess)
+	err := f.mongo.UpdateByKv("uid", mess.UID, 0, mess)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (f *manager) SendFromBackup(Id string) error {
 	if err = f.producer.SendFromBackup(mess); err != nil {
 		mess.SetCode(contract.QCodeInQFail)
 		mess.SetReason(err.Error())
-		err = f.mongo.UpdatePartByKv("uid", mess.UID, 0, mess)
+		err = f.mongo.UpdateByKv("uid", mess.UID, 0, mess)
 		if err != nil {
 			return err
 		}

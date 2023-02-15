@@ -34,7 +34,7 @@ func (z *zLog) start() error {
 	newCore := make([]zapcore.Core, 0)
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = func(i time.Time, encoder zapcore.PrimitiveArrayEncoder) {
-		encoder.AppendString(time.Now().Format(contract.TimeFormat))
+		encoder.AppendString(time.Now().Format(tool.TimeFormat))
 	}
 	encoderConfig.MessageKey = ""
 
