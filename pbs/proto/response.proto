@@ -1,0 +1,43 @@
+syntax = "proto3";
+import "google/protobuf/any.proto";
+
+
+option go_package = ".;think";
+package think;
+
+
+enum Code  {
+  Invalid = 0;
+  Min = 100000;
+  Success = 100200; // 成功
+  Biz = 100208; // 成功
+  SuccessAction = 100201; // 成功行为
+  AlterError = 102400; // 简单错误
+  ParamError = 101400; // 参数错误
+  NotFound = 100404; // 记录错误
+  Repeat = 100405; // 重复操作, 表示已存在
+  UnImpl = 103400; // 未实现
+  Forbidden = 100403; // 禁止访问
+  SignError = 101403; // 签名错误
+  Unauthorized = 100401; // 未认证
+  TooManyRequests = 100429; // 请求过于频繁
+  SystemSpaceError = 100500; // 系统空间错误  不外抛
+  PanicError = 100502; // 系统崩溃错误
+  Ignore = 101500; // 忽略
+  Undefined = 102500; // 未定义
+  TimeOut = 102504; // 超时
+  Exception = 103500; // 异常
+  TypeError = 104500; // 类型错误
+  Unavailable = 105500; // 不可达
+}
+
+message ResponseGrpc {
+  Code Code = 1;
+  string BizCode = 2;
+  string Message = 3;
+  map<string, string> Metadata = 4;
+  google.protobuf.Any Data = 5;
+}
+
+
+
