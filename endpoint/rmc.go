@@ -3,6 +3,7 @@ package endpoint
 import (
 	"context"
 	"github.com/zander-84/seagull/think"
+	"github.com/zander-84/seagull/transport"
 	"log"
 	"runtime"
 	"strings"
@@ -12,18 +13,18 @@ import (
 type Rmc interface {
 	Group(prefix string, options ...Options) Rmc
 	Use(options ...Options) Rmc
-	Endpoint(method Method, path string, e HandlerFunc, codec Codecs, options ...Options)
-	Proxy(proxy ProxyEndpoint, kind Kind)
-	GetEndpoint(p Kind, method Method, path string) (HandlerFunc, error)
-	MustGetEndpoint(p Kind, method Method, path string) HandlerFunc
+	Endpoint(method transport.Method, path string, e HandlerFunc, codec Codecs, options ...Options)
+	Proxy(proxy ProxyEndpoint, kind transport.Kind)
+	GetEndpoint(p transport.Kind, method transport.Method, path string) (HandlerFunc, error)
+	MustGetEndpoint(p transport.Kind, method transport.Method, path string) HandlerFunc
 
-	GetCodec(p Kind, method Method, path string) (Codec, error)
-	MustGetCodec(p Kind, method Method, path string) Codec
+	GetCodec(p transport.Kind, method transport.Method, path string) (Codec, error)
+	MustGetCodec(p transport.Kind, method transport.Method, path string) Codec
 }
 
 type Conf struct {
 	Path     string
-	Method   Method
+	Method   transport.Method
 	FullPath Path
 
 	//ps         []Protocol
@@ -111,7 +112,7 @@ func (r *rmc) Use(options ...Options) Rmc {
 	return nr
 }
 
-func (r *rmc) MustGetCodec(p Kind, method Method, path string) Codec {
+func (r *rmc) MustGetCodec(p transport.Kind, method transport.Method, path string) Codec {
 	out, err := r.GetCodec(p, method, path)
 	if err != nil {
 		panic("miss codec method: 【" + string(method) + "】 path: 【" + path + "】")
@@ -119,7 +120,7 @@ func (r *rmc) MustGetCodec(p Kind, method Method, path string) Codec {
 	return out
 }
 
-func (r *rmc) GetCodec(p Kind, method Method, path string) (Codec, error) {
+func (r *rmc) GetCodec(p transport.Kind, method transport.Method, path string) (Codec, error) {
 	conf, err := r.getConfig(method, path)
 	if err != nil {
 		return Codec{}, err
@@ -135,7 +136,7 @@ func (r *rmc) GetCodec(p Kind, method Method, path string) (Codec, error) {
 	return codec, nil
 }
 
-func (r *rmc) MustGetEndpoint(p Kind, method Method, path string) HandlerFunc {
+func (r *rmc) MustGetEndpoint(p transport.Kind, method transport.Method, path string) HandlerFunc {
 	out, err := r.GetEndpoint(p, method, path)
 	if err != nil {
 		panic("miss endpoint method: 【" + string(method) + "】 path: 【" + path + "】")
@@ -143,7 +144,7 @@ func (r *rmc) MustGetEndpoint(p Kind, method Method, path string) HandlerFunc {
 	return out
 }
 
-func (r *rmc) GetEndpoint(p Kind, method Method, path string) (HandlerFunc, error) {
+func (r *rmc) GetEndpoint(p transport.Kind, method transport.Method, path string) (HandlerFunc, error) {
 	conf, err := r.getConfig(method, path)
 	if err != nil {
 		return nil, err
@@ -159,7 +160,7 @@ func (r *rmc) GetEndpoint(p Kind, method Method, path string) (HandlerFunc, erro
 	return r._endpoint(conf.HandlerFunc, codec.Dec, codec.Enc, conf.Middleware, conf.InnerMiddleware, conf.ErrorEncoder), nil
 }
 
-func (r *rmc) Endpoint(method Method, path string, hf HandlerFunc, codecs Codecs, options ...Options) {
+func (r *rmc) Endpoint(method transport.Method, path string, hf HandlerFunc, codecs Codecs, options ...Options) {
 	key := Key(method, path)
 	if _, ok := r.endpoints[key]; ok {
 		log.Panicf("路径已经注册 %s", key)
@@ -184,7 +185,7 @@ func (r *rmc) Endpoint(method Method, path string, hf HandlerFunc, codecs Codecs
 	nr.endpoints[key] = nr.conf
 }
 
-func (r *rmc) getConfig(method Method, path string) (*Conf, error) {
+func (r *rmc) getConfig(method transport.Method, path string) (*Conf, error) {
 	key := Key(method, path)
 	conf, ok := r.endpoints[key]
 	if !ok {
@@ -208,7 +209,7 @@ func Recover(ctx context.Context) error {
 
 func (r *rmc) _endpoint(hf HandlerFunc, dec Dec, enc Enc, middleware Middleware, innerMiddleware Middleware, errorEncoder ErrorEncoder) HandlerFunc {
 	return func(ctx context.Context, request interface{}) (resp interface{}, err error) {
-		kind := GetTransporter(ctx).Kind()
+		kind := transport.GetTransporter(ctx).Kind()
 
 		resp, err = middleware(func(hf HandlerFunc) HandlerFunc {
 			return func(ctx context.Context, data interface{}) (interface{}, error) {
@@ -243,8 +244,8 @@ func (r *rmc) _endpoint(hf HandlerFunc, dec Dec, enc Enc, middleware Middleware,
 				err = errorEncoder(ctx, kind, err)
 			}
 		} else {
-			if sender, ok := resp.(func() error); ok {
-				if err = sender(); err != nil {
+			if sender, ok := resp.(func() (any, error)); ok {
+				if resp, err = sender(); err != nil {
 					if errorEncoder != nil {
 						err = errorEncoder(ctx, kind, err)
 					}
@@ -256,7 +257,7 @@ func (r *rmc) _endpoint(hf HandlerFunc, dec Dec, enc Enc, middleware Middleware,
 	}
 }
 
-func (r *rmc) Proxy(proxy ProxyEndpoint, kind Kind) {
+func (r *rmc) Proxy(proxy ProxyEndpoint, kind transport.Kind) {
 	for _, v := range r.endpoints {
 		conf, err := r.getConfig(v.Method, v.Path)
 		if err != nil {
@@ -269,15 +270,15 @@ func (r *rmc) Proxy(proxy ProxyEndpoint, kind Kind) {
 	}
 }
 
-func Key(method Method, path string) string {
+func Key(method transport.Method, path string) string {
 	return string(method) + ":" + path
 }
 
-func parseKey(key string) (Method, string) {
+func parseKey(key string) (transport.Method, string) {
 	data := strings.Split(key, ":")
 	if len(data) < 2 {
-		return Method(data[0]), ""
+		return transport.Method(data[0]), ""
 	}
 
-	return Method(data[0]), strings.Join(data[1:], ":")
+	return transport.Method(data[0]), strings.Join(data[1:], ":")
 }

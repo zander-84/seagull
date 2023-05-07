@@ -1,15 +1,18 @@
 package endpoint
 
-import "strings"
+import (
+	"github.com/zander-84/seagull/transport"
+	"strings"
+)
 
 type Path struct {
 	path       string
 	fullPath   string
 	serverName string
-	method     Method
+	method     transport.Method
 }
 
-func NewPath(path string, method Method) Path {
+func NewPath(path string, method transport.Method) Path {
 	p := Path{}
 	p.path = path
 	p.method = method
@@ -34,6 +37,6 @@ func (p Path) ServerName() string {
 	return strings.ReplaceAll(strings.Trim(p.path, "/"), "/", ".")
 }
 
-func (p Path) Method() Method {
+func (p Path) Method() transport.Method {
 	return p.method
 }

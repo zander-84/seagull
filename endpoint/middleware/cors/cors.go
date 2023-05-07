@@ -3,6 +3,7 @@ package cors
 import (
 	"context"
 	"errors"
+	"github.com/zander-84/seagull/transport"
 	"net/http"
 	"strings"
 
@@ -144,7 +145,7 @@ func New(config Config) endpoint.Middleware {
 
 	return func(next endpoint.HandlerFunc) endpoint.HandlerFunc {
 		return func(ctx context.Context, request interface{}) (out interface{}, err error) {
-			transporter := endpoint.GetTransporter(ctx)
+			transporter := transport.GetTransporter(ctx)
 			if transporter.Kind().IsHttp() {
 				httpCtx := ctx.(zhttp.Context)
 				err = cors1.applyCors(httpCtx)

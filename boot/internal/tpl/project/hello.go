@@ -57,8 +57,10 @@ func (HelloCodec) GrpcDecode(ctx context.Context, request interface{}) (interfac
 }
 
 func (HelloCodec) GrpcEncode(ctx context.Context, request interface{}) (interface{}, error) {
+	grpcCtx := ctx.(grpc.Context)
+
 	data := new(pbs.Response)
 	data.AdminName = "zander"
-	return data, nil
+	return grpcCtx.Encoder(data), nil
 }
 `

@@ -11,6 +11,7 @@ import (
 	"github.com/zander-84/seagull/contrib/registry/etcd"
 	"github.com/zander-84/seagull/endpoint"
 	"github.com/zander-84/seagull/pbs"
+	"github.com/zander-84/seagull/transport"
 	"github.com/zander-84/seagull/transport/grpc"
 	"github.com/zander-84/seagull/transport/http"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -51,21 +52,21 @@ func (r *mockRegistry) Deregister(ctx context.Context, service *contract.Service
 
 func TestApp(t *testing.T) {
 	resource := endpoint.NewRmc()
-	resource = resource.Use(endpoint.OptErrorEncoder(endpoint.WrapError(map[endpoint.Kind]func(ctx context.Context, err error) error{
-		endpoint.Http: func(ctx context.Context, err error) error {
+	resource = resource.Use(endpoint.OptErrorEncoder(endpoint.WrapError(map[transport.Kind]func(ctx context.Context, err error) error{
+		transport.Http: func(ctx context.Context, err error) error {
 			err = ctx.(http.Context).ErrorEncoder(err, false)
 			return err
 		},
-		endpoint.Grpc: func(ctx context.Context, err error) error {
+		transport.Grpc: func(ctx context.Context, err error) error {
 			err = ctx.(grpc.Context).ErrorEncoder(err, false)
 			return err
 		},
 	})))
 
-	resource.Endpoint(endpoint.MethodGet, "/a/:id", func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	resource.Endpoint(transport.MethodGet, "/a/:id", func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		return "hello", err
 	}, endpoint.Codecs{
-		endpoint.Http: {
+		transport.Http: {
 			Dec: func(ctx context.Context, request interface{}) (response interface{}, err error) {
 				return request, err
 			},
@@ -75,7 +76,7 @@ func TestApp(t *testing.T) {
 				return ctx, err
 			},
 		},
-		endpoint.Grpc: {
+		transport.Grpc: {
 			Dec: func(ctx context.Context, request interface{}) (response interface{}, err error) {
 				return request, nil
 			},
@@ -90,7 +91,7 @@ func TestApp(t *testing.T) {
 	//g := gin.New()
 	g := httprouter.New()
 	p := http_router.NewRouter(g)
-	resource.Proxy(p.Endpoint, endpoint.Http)
+	resource.Proxy(p.Endpoint, transport.Http)
 
 	hs := http.NewServer("http", "0.0.0.0", "127.0.0.1", 9009, http.ServerHandler(p))
 	gs := grpc.NewServer("grpc", "127.0.0.1", "127.0.0.1", 9003)
@@ -167,21 +168,21 @@ func TestApp(t *testing.T) {
 }
 func TestApp2(t *testing.T) {
 	resource := endpoint.NewRmc()
-	resource = resource.Use(endpoint.OptErrorEncoder(endpoint.WrapError(map[endpoint.Kind]func(ctx context.Context, err error) error{
-		endpoint.Http: func(ctx context.Context, err error) error {
+	resource = resource.Use(endpoint.OptErrorEncoder(endpoint.WrapError(map[transport.Kind]func(ctx context.Context, err error) error{
+		transport.Http: func(ctx context.Context, err error) error {
 			err = ctx.(http.Context).ErrorEncoder(err, false)
 			return err
 		},
-		endpoint.Grpc: func(ctx context.Context, err error) error {
+		transport.Grpc: func(ctx context.Context, err error) error {
 			err = ctx.(grpc.Context).ErrorEncoder(err, false)
 			return err
 		},
 	})))
 
-	resource.Endpoint(endpoint.MethodGet, "/a", func(ctx context.Context, request interface{}) (response interface{}, err error) {
+	resource.Endpoint(transport.MethodGet, "/a", func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		return "hello", err
 	}, endpoint.Codecs{
-		endpoint.Http: {
+		transport.Http: {
 			Dec: func(ctx context.Context, request interface{}) (response interface{}, err error) {
 				return request, err
 			},
@@ -191,7 +192,7 @@ func TestApp2(t *testing.T) {
 				return ctx, err
 			},
 		},
-		endpoint.Grpc: {
+		transport.Grpc: {
 			Dec: func(ctx context.Context, request interface{}) (response interface{}, err error) {
 				return request, nil
 			},
@@ -206,7 +207,7 @@ func TestApp2(t *testing.T) {
 	//g := gin.New()
 	g := httprouter.New()
 	p := http_router.NewRouter(g)
-	resource.Proxy(p.Endpoint, endpoint.Http)
+	resource.Proxy(p.Endpoint, transport.Http)
 
 	hs := http.NewServer("http", "127.0.0.1", "127.0.0.1", 9021, http.ServerHandler(p))
 	gs := grpc.NewServer("grpc", "127.0.0.1", "127.0.0.1", 9022)
@@ -259,7 +260,7 @@ type server struct {
 }
 
 func (s server) Info(ctx context.Context, in *pbs.Request) (*pbs.Response, error) {
-	h := s.Rmc.MustGetEndpoint(endpoint.Grpc, endpoint.MethodGet, "/a")
+	h := s.Rmc.MustGetEndpoint(transport.Grpc, transport.MethodGet, "/a")
 
 	//endpointCtxVal := endpoint.NewCtxVal()
 	//endpointCtxVal.SetProtocol(endpoint.Grpc)

@@ -3,6 +3,7 @@ package grpc_router
 import (
 	"context"
 	"github.com/zander-84/seagull/endpoint"
+	"github.com/zander-84/seagull/transport"
 	grpc2 "github.com/zander-84/seagull/transport/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -25,12 +26,12 @@ func (r *Router) ServerHandler() []grpc.ServiceDesc {
 
 func grpcCtx(ctx context.Context, fullPath endpoint.Path) context.Context {
 	md, _ := metadata.FromIncomingContext(ctx)
-	endpointCtxVal := endpoint.NewTransporter(endpoint.Grpc, endpoint.NewHeader(md), fullPath.FullPath(), fullPath.Method())
-	ctx = endpoint.WithContext(ctx, endpointCtxVal)
-	return grpc2.NewGrpcContext(ctx)
+	endpointCtxVal := transport.NewTransporter(transport.Grpc, transport.NewHeader(md), fullPath.FullPath(), fullPath.Method())
+	ctx = transport.WithContext(ctx, endpointCtxVal)
+	return grpc2.NewGrpcContext(ctx, endpointCtxVal)
 }
 
-func (r *Router) Endpoint(kind endpoint.Kind, fullPath endpoint.Path, h endpoint.HandlerFunc) {
+func (r *Router) Endpoint(kind transport.Kind, fullPath endpoint.Path, h endpoint.HandlerFunc) {
 	data := grpc.ServiceDesc{
 		ServiceName: fullPath.ServerName(),
 		HandlerType: nil,

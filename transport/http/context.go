@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/zander-84/seagull/internal/host"
 	"github.com/zander-84/seagull/think"
+	"github.com/zander-84/seagull/transport"
 	"io"
 	"mime/multipart"
 	"net"
@@ -51,19 +52,19 @@ type Context interface {
 
 	//Returns(interface{}, error) error
 	//Result(int, interface{}) error
-	JSON(int, interface{}) func() error
-	XML(int, interface{}) func() error
-	String(int, string) func() error
-	Blob(int, string, []byte) func() error
-	Stream(int, string, io.Reader) func() error
+	JSON(int, interface{}) func() (any, error)
+	XML(int, interface{}) func() (any, error)
+	String(int, string) func() (any, error)
+	Blob(int, string, []byte) func() (any, error)
+	Stream(int, string, io.Reader) func() (any, error)
 
 	//Reset(http.ResponseWriter, *http.Request)
 	ErrorEncoder(err error, isProdEnv bool) error
 }
 
-func NewHttpContext(res http.ResponseWriter, req *http.Request, proxy Proxy) Context {
+func NewHttpContext(res http.ResponseWriter, req *http.Request, proxy Proxy, transporter transport.Transporter) Context {
 	w := &wrapper{}
-	w.Reset(res, req, proxy)
+	w.Reset(res, req, proxy, transporter)
 	return w
 }
 
@@ -84,10 +85,11 @@ func (w *responseWriter) Write(data []byte) (int, error) {
 }
 
 type wrapper struct {
-	proxy Proxy
-	req   *http.Request
-	res   http.ResponseWriter
-	w     responseWriter
+	proxy       Proxy
+	req         *http.Request
+	res         http.ResponseWriter
+	w           responseWriter
+	transporter transport.Transporter
 }
 
 func (c *wrapper) Header() http.Header {
@@ -108,55 +110,62 @@ func (c *wrapper) Query() url.Values {
 func (c *wrapper) Request() *http.Request        { return c.req }
 func (c *wrapper) Response() http.ResponseWriter { return c.res }
 
-func (c *wrapper) JSON(code int, v interface{}) func() error {
-	return func() error {
+func (c *wrapper) JSON(code int, v interface{}) func() (any, error) {
+	return func() (any, error) {
+		c.replyHeader()
 		c.res.Header().Set("Content-Type", "application/json")
 		c.res.WriteHeader(code)
-		return json.NewEncoder(c.res).Encode(v)
+		return v, json.NewEncoder(c.res).Encode(v)
 	}
 }
 
-func (c *wrapper) XML(code int, v interface{}) func() error {
-	return func() error {
+func (c *wrapper) XML(code int, v interface{}) func() (any, error) {
+	return func() (any, error) {
+		c.replyHeader()
 		c.res.Header().Set("Content-Type", "application/xml")
 		c.res.WriteHeader(code)
-		return xml.NewEncoder(c.res).Encode(v)
+		return v, xml.NewEncoder(c.res).Encode(v)
 	}
 }
 
-func (c *wrapper) String(code int, text string) func() error {
-	return func() error {
+func (c *wrapper) String(code int, text string) func() (any, error) {
+	return func() (any, error) {
+		c.replyHeader()
 		c.res.Header().Set("Content-Type", "text/plain")
 		c.res.WriteHeader(code)
 		_, err := c.res.Write([]byte(text))
-		return err
+		return text, err
 	}
 }
 
-func (c *wrapper) Blob(code int, contentType string, data []byte) func() error {
-	return func() error {
+func (c *wrapper) Blob(code int, contentType string, data []byte) func() (any, error) {
+	return func() (any, error) {
+		c.replyHeader()
 		c.res.Header().Set("Content-Type", contentType)
 		c.res.WriteHeader(code)
 		_, err := c.res.Write(data)
-		return err
+		return data, err
 	}
 
 }
 
-func (c *wrapper) Stream(code int, contentType string, rd io.Reader) func() error {
-	return func() error {
+func (c *wrapper) Stream(code int, contentType string, rd io.Reader) func() (any, error) {
+	return func() (any, error) {
+		c.replyHeader()
 		c.res.Header().Set("Content-Type", contentType)
 		c.res.WriteHeader(code)
 		_, err := io.Copy(c.res, rd)
-		return err
+		return rd, err
 	}
 }
 
-func (c *wrapper) Reset(res http.ResponseWriter, req *http.Request, proxy Proxy) {
+func (c *wrapper) Reset(res http.ResponseWriter, req *http.Request, proxy Proxy, transporter transport.Transporter) {
 	c.w.rest(res)
 	c.res = res
 	c.req = req
 	c.proxy = proxy
+	c.transporter = transporter
+
 }
 
 func (c *wrapper) Deadline() (time.Time, bool) {
@@ -195,7 +204,7 @@ func (c *wrapper) ErrorEncoder(err error, isProdEnv bool) error {
 		thinkErr.Response.Data = thinkErr.Code.ToString()
 	}
 
-	_ = c.JSON(thinkErr.Code.HttpCode(), thinkErr.Response)()
+	_, _ = c.JSON(thinkErr.Code.HttpCode(), thinkErr.Response)()
 
 	if isProdEnv && think.IsErrSystemSpace(thinkErr) {
 		thinkErr.Response.Data = data
@@ -296,4 +305,11 @@ func (c *wrapper) ClientIp(remoteIPHeaders []string) string {
 		}
 	}
 	return remoteIP.String()
+}
+
+func (c *wrapper) replyHeader() {
+	c.transporter.ReplyHeader().Foreach(func(k, v string) error {
+		c.res.Header().Set(k, v)
+		return nil
+	})
 }

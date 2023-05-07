@@ -131,7 +131,11 @@ func (w *Worker) consumer(j *Job) *Job {
 	if w.hasErrQuite() {
 		return j
 	}
-
+	if j.ctx.Err() != nil {
+		j.error = j.ctx.Err()
+		w.doErrQuite(j.error)
+		return j
+	}
 	done := j.ctx.Done()
 	if done == nil {
 		func() {

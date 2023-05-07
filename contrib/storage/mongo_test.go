@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"github.com/zander-84/seagull/drive/mongo"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"testing"
 )
@@ -31,25 +32,25 @@ func (s *student2) UpdatedFields() map[string]any {
 	return out
 }
 
-func (s *student2) SetName(name string) {
+func (s *student2) UpdateName(name string) {
 	s.updateFields["name"] = name
 	s.Name = name
 }
-func (s *student2) SetStatus(status int) {
+func (s *student2) UpdateStatus(status int) {
 	s.updateFields["status"] = status
 	s.Status = status
 }
 
-func (s *student2) SetUpdatedAt(updatedAt int64) {
+func (s *student2) UpdateUpdatedAt(updatedAt int64) {
 	s.updateFields["updated_at"] = updatedAt
 	s.UpdatedAt = updatedAt
 }
-func (s *student2) SetCreatedAt(createdAt int64) {
+func (s *student2) UpdateCreatedAt(createdAt int64) {
 	s.updateFields["created_at"] = createdAt
 	s.CreatedAt = createdAt
 }
 
-func (s *student2) SetVersion(version int) {
+func (s *student2) UpdateVersion(version int) {
 	s.Version = version
 }
 func (s *student2) GetVersion() int {
@@ -70,18 +71,36 @@ func TestNewMongo(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	m := NewMongo(mdb.DB(), "student", 100)
+	m := NewMongo(mdb.DB(), "student3", 100)
 
-	//for i := 0; i < 10000; i++ {
+	//for i := 0; i < 10; i++ {
 	//	s := newStudent2()
 	//	s.Name = fmt.Sprintf("name-%d", i)
 	//	s.Status = i % 128
-	//	id, err := m.Create(s)
+	//	_, err := m.Create(s)
 	//	if err != nil {
 	//		t.Fatal(err.Error())
 	//	}
-	//	fmt.Println(s, id)
+	//	//fmt.Println(s, id)
 	//}
+
+	searchMeta2 := NewSearchMeta()
+	//searchMeta2.SetPage(2)
+	//searchMeta2.SetPageSize(3)
+	searchMeta2.UseCount(false)
+	searchMeta2.UseCursor(true)
+	searchMeta2.UsePage(false)
+
+	mysqlBuilder2 := NewMongoBuilder()
+	mysqlBuilder2.AppendWhere(bson.E{Key: "version", Value: 1})
+
+	res := make([]student2, 0)
+	var cnt int64 = 0
+	if err := m.Search(searchMeta2, mysqlBuilder2, &res, &cnt); err != nil {
+		t.Fatal(err.Error())
+	}
+	//
+	fmt.Println(cnt, len(res), res)
 
 	//s := newStudent2()
 	//if err := m.FindByID("63c1460a8abbf40a24e6c81d", s); err != nil {
@@ -113,24 +132,6 @@ func TestNewMongo(t *testing.T) {
 	//	t.Fatal(err.Error())
 	//}
 	//fmt.Println(s1)
-
-	//searchMeta2 := NewSearchMete()
-	//searchMeta2.SetPage(2)
-	//searchMeta2.SetPageSize(3)
-	//searchMeta2.UseCount(true)
-	//searchMeta2.UseCursor(false)
-	//searchMeta2.UsePage(false)
-	//
-	//mysqlBuilder2 := NewMongoBuilder()
-	//mysqlBuilder2.AppendWhere(bson.E{Key: "version", Value: 1})
-	//
-	//res := make([]student2, 0)
-	//var cnt int64 = 0
-	//if err := m.Search(searchMeta2, mysqlBuilder2, &res, &cnt); err != nil {
-	//	t.Fatal(err.Error())
-	//}
-	//
-	//fmt.Println(cnt, len(res), res)
 
 	//q := make([]string, 0)
 	//for i := 0; i < 1000; i++ {

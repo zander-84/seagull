@@ -1,12 +1,14 @@
 package wraptransporter
 
-import "github.com/zander-84/seagull/endpoint"
+import (
+	"github.com/zander-84/seagull/transport"
+)
 
-func SetToken(ts endpoint.Transporter, token string) {
+func SetToken(ts transport.Transporter, token string) {
 	ts.Body().Set("_token", token)
 }
 
-func GetToken(ts endpoint.Transporter) string {
+func GetToken(ts transport.Transporter) string {
 	data, ok := ts.Body().Get("_token")
 	if !ok {
 		return ""
@@ -14,11 +16,11 @@ func GetToken(ts endpoint.Transporter) string {
 	res, _ := data.(string)
 	return res
 }
-func SetTraceID(ts endpoint.Transporter, traceID string) {
+func SetTraceID(ts transport.Transporter, traceID string) {
 	ts.Body().Set("_traceId", traceID)
 }
 
-func GetTraceID(ts endpoint.Transporter) string {
+func GetTraceID(ts transport.Transporter) string {
 	data, ok := ts.Body().Get("_traceId")
 	if !ok {
 		return ""
@@ -27,22 +29,22 @@ func GetTraceID(ts endpoint.Transporter) string {
 	return res
 }
 
-func SetUser(ts endpoint.Transporter, user any) {
+func SetUser(ts transport.Transporter, user any) {
 	ts.Body().Set("_user", user)
 }
 
 // GetUser 每个项目需要再次wrap下
-func GetUser(ts endpoint.Transporter) any {
+func GetUser(ts transport.Transporter) any {
 	data, _ := ts.Body().Get("_user")
 	return data
 }
 
-func SetPage(ts endpoint.Transporter, page int) {
+func SetPage(ts transport.Transporter, page int) {
 
 	ts.Body().Set("_page", page)
 }
 
-func GetPage(ts endpoint.Transporter) int {
+func GetPage(ts transport.Transporter) int {
 	data, ok := ts.Body().Get("_page")
 	if !ok {
 		return 0
@@ -51,11 +53,11 @@ func GetPage(ts endpoint.Transporter) int {
 	return res
 }
 
-func SetPageSize(ts endpoint.Transporter, pageSize int) {
+func SetPageSize(ts transport.Transporter, pageSize int) {
 	ts.Body().Set("_pageSize", pageSize)
 }
 
-func GetPageSize(ts endpoint.Transporter) int {
+func GetPageSize(ts transport.Transporter) int {
 	data, ok := ts.Body().Get("_pageSize")
 	if !ok {
 		return 0
@@ -65,11 +67,11 @@ func GetPageSize(ts endpoint.Transporter) int {
 	return res
 }
 
-func SetCount(ts endpoint.Transporter, cnt int64) {
+func SetCount(ts transport.Transporter, cnt int64) {
 	ts.Body().Set("_cnt", cnt)
 }
 
-func GetCount(ts endpoint.Transporter) int64 {
+func GetCount(ts transport.Transporter) int64 {
 	data, ok := ts.Body().Get("_cnt")
 	if !ok {
 		return 0
@@ -78,24 +80,24 @@ func GetCount(ts endpoint.Transporter) int64 {
 	return res
 }
 
-func SetData(ts endpoint.Transporter, data any) {
+func SetData(ts transport.Transporter, data any) {
 	ts.Body().Set("_data", data)
 }
 
-func GetData(ts endpoint.Transporter) any {
+func GetData(ts transport.Transporter) any {
 	data, _ := ts.Body().Get("_data")
 	return data
 }
 
-func Set(ts endpoint.Transporter, key string, data any) {
+func Set(ts transport.Transporter, key string, data any) {
 	ts.Body().Set(key, data)
 }
 
-func Get(ts endpoint.Transporter, key string) (any, bool) {
+func Get(ts transport.Transporter, key string) (any, bool) {
 	data, ok := ts.Body().Get(key)
 	return data, ok
 }
-func ShouldGet(ts endpoint.Transporter, key string) any {
+func ShouldGet(ts transport.Transporter, key string) any {
 	data, _ := ts.Body().Get(key)
 	return data
 }

@@ -11,9 +11,12 @@ import (
 func TestWorker_DO(t *testing.T) {
 	fmt.Println("start:", time.Now().Format("2006-01-02 15:04:05"))
 	p := NewWorker()
-	for i := 0; i < 20000000; i++ {
-		p.AddJob(context.Background(), fmt.Sprintf("%d", i), i, func(in interface{}) (interface{}, error) {
-			//time.Sleep(2*time.Second)
+	ctx11, c11 := context.WithTimeout(context.Background(), 3*time.Second)
+	defer c11()
+	for i := 0; i < 10; i++ {
+		p.AddJob(ctx11, fmt.Sprintf("%d", i), i, func(in interface{}) (interface{}, error) {
+			time.Sleep(2 * time.Second)
+			fmt.Println(in)
 			return in, nil
 		})
 	}
@@ -30,24 +33,27 @@ func TestWorker_DO(t *testing.T) {
 	})
 	c1, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
-	jobs, err := p.Do(c1, 20)
-	fmt.Println("fin Do")
-	jobs.GetMap()
-	fmt.Println(len(jobs.dataMap))
+	_, err := p.Do(c1, 2)
+	fmt.Println("fin")
+	time.Sleep(time.Second * 6)
+	fmt.Println(err)
+	//fmt.Println("fin Do")
+	//jobs.GetMap()
+	//fmt.Println(len(jobs.dataMap))
 	//fmt.Println(jobs.dataMap)
 	//fmt.Println(student)
 	//time.Sleep(3 * time.Second)
-	if err != nil {
-		fmt.Println("do err: ", err.Error())
-	} else {
-		fmt.Println("no err")
-		//for k, e := range a.GetSlice() {
-		//	fmt.Println(k, "==>", e.title, e.error)
-		//}
-		//for k, e := range a.GetMap() {
-		//	fmt.Println(k,"==>",fmt.Sprintf("%+v", e))
-		//}
-	}
+	//if err != nil {
+	//	fmt.Println("do err: ", err.Error())
+	//} else {
+	//	fmt.Println("no err")
+	//	//for k, e := range a.GetSlice() {
+	//	//	fmt.Println(k, "==>", e.title, e.error)
+	//	//}
+	//	//for k, e := range a.GetMap() {
+	//	//	fmt.Println(k,"==>",fmt.Sprintf("%+v", e))
+	//	//}
+	//}
 	//time.Sleep(3 * time.Second)
 	fmt.Println("end:", time.Now().Format("2006-01-02 15:04:05"))
 }

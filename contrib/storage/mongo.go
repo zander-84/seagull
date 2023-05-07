@@ -291,15 +291,28 @@ func (m *myMongo) Search(searchMeta contract.SearchMeta, searchParams contract.M
 			return err
 		}
 	} else {
+		tmp := make([]bson.Raw, 0)
 		for cursor.Next(context.Background()) {
-			tmp := reflect.New(reflectValue.Type().Elem())
-			if err = cursor.Decode(tmp.Interface()); err != nil {
-				cursor.Close(context.Background())
-				return err
-			}
-			reflectValue.Set(reflect.Append(reflectValue, tmp.Elem()))
+			tmp = append(tmp, cursor.Current)
+
+			//tmp := reflect.New(reflectValue.Type().Elem())
+			//if err = cursor.Decode(tmp.Interface()); err != nil {
+			//	cursor.Close(context.Background())
+			//	return err
+			//}
+			//reflectValue.Set(reflect.Append(reflectValue, tmp.Elem()))
 		}
 		err = cursor.Close(context.Background())
+		if err != nil {
+			return err
+		}
+		for k, _ := range tmp {
+			rowData := reflect.New(reflectValue.Type().Elem())
+			if err := bson.UnmarshalWithRegistry(bson.DefaultRegistry, tmp[k], rowData.Interface()); err != nil {
+				return err
+			}
+			reflectValue.Set(reflect.Append(reflectValue, rowData.Elem()))
+		}
 	}
 
 	return err

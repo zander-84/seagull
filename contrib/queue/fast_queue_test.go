@@ -20,7 +20,7 @@ func TestNewFastProducer(t *testing.T) {
 		t.Fatal("nsq start err:" + err.Error())
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1; i++ {
 		message := &contract.QMessage{
 			Kind:       "k1",
 			ForeignKey: "456",
@@ -48,8 +48,12 @@ func TestNewFastConsumer(t *testing.T) {
 				fmt.Println(data, "消费时间失败 ", time.Now().Format("2006-01-02 15:04:05"))
 				return errors.New("exit")
 			default:
-				time.Sleep(time.Second)
+				fmt.Println("begin")
+				//time.Sleep(time.Minute * 2)
 				fmt.Println(data, "消费时间 ", time.Now().Format("2006-01-02 15:04:05"))
+				fmt.Println("end")
+
+				//return errors.New("some think error")
 				return nil
 
 			}

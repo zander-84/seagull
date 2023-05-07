@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/zander-84/seagull/endpoint"
 	"github.com/zander-84/seagull/endpoint/wraptransporter"
+	"github.com/zander-84/seagull/transport"
 	"github.com/zander-84/seagull/transport/http"
 	"strconv"
 )
@@ -11,7 +12,7 @@ import (
 func Assign(token string, pageCode string, PageSize string) endpoint.Middleware {
 	return func(next endpoint.HandlerFunc) endpoint.HandlerFunc {
 		return func(ctx context.Context, request interface{}) (out interface{}, err error) {
-			transporter := endpoint.GetTransporter(ctx)
+			transporter := transport.GetTransporter(ctx)
 			if pageCode != "" {
 				if transporter.Kind().IsHttp() {
 					httpCtx := ctx.(http.Context)

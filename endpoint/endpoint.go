@@ -2,21 +2,22 @@ package endpoint
 
 import (
 	"context"
+	"github.com/zander-84/seagull/transport"
 )
 
 type Endpoint func(ctx context.Context, request interface{}, codec Codec, errorEncoder ErrorEncoder, recoverEncoder RecoverEncoder) (response interface{}, err error)
 
 type HandlerFunc func(ctx context.Context, request interface{}) (response interface{}, err error)
 
-type ProxyEndpoint func(p Kind, fullPath Path, e HandlerFunc)
+type ProxyEndpoint func(p transport.Kind, fullPath Path, e HandlerFunc)
 
-type ErrorEncoder func(ctx context.Context, p Kind, err error) error
+type ErrorEncoder func(ctx context.Context, p transport.Kind, err error) error
 
-func WrapError(e map[Kind]func(ctx context.Context, err error) error) ErrorEncoder {
+func WrapError(e map[transport.Kind]func(ctx context.Context, err error) error) ErrorEncoder {
 	if e == nil {
 		return nil
 	}
-	return func(ctx context.Context, p Kind, err error) error {
+	return func(ctx context.Context, p transport.Kind, err error) error {
 		for k, v := range e {
 			if k == p {
 				if v == nil {
@@ -31,12 +32,12 @@ func WrapError(e map[Kind]func(ctx context.Context, err error) error) ErrorEncod
 
 type RecoverEncoder func(ctx context.Context, err *error)
 
-func WrapRecover(rec map[Kind]func(ctx context.Context, err *error)) func(ctx context.Context, p Kind) RecoverEncoder {
+func WrapRecover(rec map[transport.Kind]func(ctx context.Context, err *error)) func(ctx context.Context, p transport.Kind) RecoverEncoder {
 	if rec == nil {
 		return nil
 	}
 
-	return func(ctx context.Context, p Kind) RecoverEncoder {
+	return func(ctx context.Context, p transport.Kind) RecoverEncoder {
 		for k, v := range rec {
 			if k == p {
 				if v == nil {
@@ -50,7 +51,7 @@ func WrapRecover(rec map[Kind]func(ctx context.Context, err *error)) func(ctx co
 	}
 }
 
-type Codecs map[Kind]Codec
+type Codecs map[transport.Kind]Codec
 
 type Codec struct {
 	Dec Dec

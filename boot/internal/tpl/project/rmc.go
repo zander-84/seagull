@@ -26,8 +26,7 @@ func NewRmc(mode think.Mode) endpoint.Rmc {
 			return err
 		},
 	}))).Use(endpoint.OptMW(middleware.Recover())).Use(endpoint.OptMW(cors.New(pkg.GinCors(mode)))).
-		Use(endpoint.OptMW(middleware.Assign("Token", "Page", "PageSize"))).
-		Use(endpoint.OptMW(middleware.BeforeResponse()))
+		Use(endpoint.OptMW(middleware.Assign("Token", "Page", "PageSize")))
 
 
 	resource.Endpoint(endpoint.MethodGet, "/", hello.Hello, endpoint.Codecs{
